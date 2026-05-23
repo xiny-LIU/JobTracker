@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JobTracker - 应届生求职管理</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- 顶部导航 -->
+    <nav class="navbar">
+        <div class="nav-brand">
+            <div class="logo">J</div>
+            <h1>JobTracker <span>应届生求职作战指挥部</span></h1>
+        </div>
+        <div class="nav-tabs">
+            <button class="tab-btn active" data-view="dashboard">仪表盘</button>
+            <button class="tab-btn" data-view="positions">求职进度</button>
+            <button class="tab-btn" data-view="resumes">资料库</button>
+            <button class="tab-btn" data-view="analytics">洞察</button>
+            <button class="tab-btn" data-view="settings">设置</button>
+        </div>
+        <div class="nav-actions">
+            <button id="sync-btn" class="btn-icon" title="同步到云端">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="17 8 12 3 7 8"></polyline>
+                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                </svg>
+            </button>
+            <span id="sync-status" class="sync-badge">本地</span>
+        </div>
+    </nav>
+
+    <!-- 主内容区 -->
+    <main class="container">
+        <!-- 仪表盘 -->
+        <section id="view-dashboard" class="view active">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon blue"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13"></path><path d="M22 2l-7 20-4-9-9-4 20-7z"></path></svg></div>
+                    <div class="stat-value" id="stat-total">0</div>
+                    <div class="stat-label">总投递</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon purple"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg></div>
+                    <div class="stat-value" id="stat-interviewing">0</div>
+                    <div class="stat-label">面试中</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon green"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path></svg></div>
+                    <div class="stat-value" id="stat-offers">0</div>
+                    <div class="stat-label">Offer</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon amber"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg></div>
+                    <div class="stat-value" id="stat-followup">0</div>
+                    <div class="stat-label">待跟进</div>
+                </div>
+            </div>
+
+            <div class="dashboard-grid">
+                <div class="panel">
+                    <h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10"></path><path d="M12 20V4"></path><path d="M6 20v-6"></path></svg> 转化漏斗</h3>
+                    <div class="funnel" id="funnel-container"></div>
+                </div>
+                <div class="panel">
+                    <h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg> 待办提醒</h3>
+                    <div class="reminders" id="reminder-list"></div>
+                </div>
+            </div>
+
+            <div class="panel mt-4">
+                <h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg> 近期活动</h3>
+                <div class="activities" id="recent-activities"></div>
+            </div>
+        </section>
+
+        <!-- 求职进度 -->
+        <section id="view-positions" class="view">
+            <div class="section-header">
+                <div>
+                    <h2>求职进度</h2>
+                    <p class="subtitle">管理公司、岗位与面试进度</p>
+                </div>
+                <button class="btn-primary" onclick="app.openModal('company')">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    添加公司
+                </button>
+            </div>
+
+            <div class="filter-bar">
+                <input type="text" id="pos-search" placeholder="搜索公司或岗位..." oninput="app.renderPositions()">
+                <select id="pos-status" onchange="app.renderPositions()">
+                    <option value="">全部状态</option>
+                    <option value="投递">投递</option>
+                    <option value="笔试">笔试</option>
+                    <option value="一面">一面</option>
+                    <option value="二面">二面</option>
+                    <option value="三面">三面</option>
+                    <option value="HR面">HR面</option>
+                    <option value="Offer">Offer</option>
+                    <option value="拒绝">拒绝</option>
+                </select>
+                <select id="pos-priority" onchange="app.renderPositions()">
+                    <option value="">全部优先级</option>
+                    <option value="5">⭐⭐⭐⭐⭐</option>
+                    <option value="4">⭐⭐⭐⭐</option>
+                    <option value="3">⭐⭐⭐</option>
+                    <option value="2">⭐⭐</option>
+                    <option value="1">⭐</option>
+                </select>
+            </div>
+
+            <div class="grid-3" id="positions-grid"></div>
+        </section>
+
+        <!-- 资料库 -->
+        <section id="view-resumes" class="view">
+            <div class="section-header">
+                <div>
+                    <h2>资料库</h2>
+                    <p class="subtitle">管理简历版本、自我介绍与求职资料</p>
+                </div>
+                <button class="btn-primary" onclick="app.openModal('resume')">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    添加资料
+                </button>
+            </div>
+
+            <div class="layout-sidebar">
+                <div class="sidebar">
+                    <button class="sidebar-btn active" data-cat="all" onclick="app.filterResumes('all')">全部资料</button>
+                    <button class="sidebar-btn" data-cat="resume" onclick="app.filterResumes('resume')">简历</button>
+                    <button class="sidebar-btn" data-cat="intro" onclick="app.filterResumes('intro')">自我介绍</button>
+                    <button class="sidebar-btn" data-cat="cover" onclick="app.filterResumes('cover')">求职信</button>
+                    <button class="sidebar-btn" data-cat="other" onclick="app.filterResumes('other')">其他</button>
+                </div>
+                <div class="grid-2" id="resumes-grid"></div>
+            </div>
+        </section>
+
+        <!-- 洞察 -->
+        <section id="view-analytics" class="view">
+            <div class="section-header">
+                <h2>数据洞察</h2>
+            </div>
+            <div class="grid-2" id="analytics-grid"></div>
+        </section>
+
+        <!-- 设置 -->
+        <section id="view-settings" class="view">
+            <div class="section-header">
+                <h2>设置</h2>
+            </div>
+            <div class="settings-panel">
+                <div class="setting-card">
+                    <h3>GitHub Gist 同步</h3>
+                    <p class="setting-desc">开启后数据自动同步到 GitHub，手机电脑实时一致。</p>
+
+                    <div id="sync-config">
+                        <div class="form-group">
+                            <label>GitHub Personal Access Token</label>
+                            <input type="password" id="github-token" placeholder="ghp_xxxxxxxxxxxx">
+                            <span class="hint">仅需 gist 权限，<a href="https://github.com/settings/tokens/new?scopes=gist&description=JobTracker" target="_blank">点击生成</a></span>
+                        </div>
+                        <div class="form-group">
+                            <label>Gist ID（可选，首次留空自动创建）</label>
+                            <input type="text" id="gist-id" placeholder="自动创建">
+                        </div>
+                        <div class="form-actions">
+                            <button class="btn-primary" onclick="app.saveSyncConfig()">保存并测试</button>
+                            <button class="btn-secondary" onclick="app.exportJSON()">导出 JSON 备份</button>
+                            <label class="btn-secondary">
+                                导入 JSON
+                                <input type="file" class="hidden" accept=".json" onchange="app.importJSON(this)">
+                            </label>
+                        </div>
+                    </div>
+
+                    <div id="sync-active" class="hidden">
+                        <div class="sync-info">
+                            <span class="badge green">已连接</span>
+                            <span id="sync-gist-id"></span>
+                        </div>
+                        <div class="form-actions">
+                            <button class="btn-primary" onclick="app.manualSync()">立即同步</button>
+                            <button class="btn-danger" onclick="app.disconnectSync()">断开连接</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="setting-card">
+                    <h3>数据管理</h3>
+                    <p class="setting-desc">当前所有数据仅存储在浏览器本地。</p>
+                    <div class="form-actions">
+                        <button class="btn-secondary" onclick="app.loadDemoData()">加载演示数据</button>
+                        <button class="btn-danger" onclick="app.clearAllData()">清空所有数据</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- 通用弹窗 -->
+    <div class="modal-backdrop hidden" id="modal-backdrop" onclick="app.closeModal()">
+        <div class="modal" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3 id="modal-title">标题</h3>
+                <button class="btn-close" onclick="app.closeModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="modal-body"></div>
+            <div class="modal-footer" id="modal-footer"></div>
+        </div>
+    </div>
+
+    <!-- 详情页弹窗 -->
+    <div class="modal-backdrop hidden" id="detail-backdrop" onclick="app.closeDetail()">
+        <div class="modal modal-lg" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="detail-header">
+                    <div class="detail-logo" id="detail-logo">公</div>
+                    <div>
+                        <h3 id="detail-title">岗位名称</h3>
+                        <p id="detail-company">公司名称</p>
+                    </div>
+                </div>
+                <div class="detail-actions">
+                    <button class="btn-secondary" onclick="app.openPrepSheet()">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                        准备包
+                    </button>
+                    <button class="btn-close" onclick="app.closeDetail()">&times;</button>
+                </div>
+            </div>
+            <div class="modal-body detail-body" id="detail-body"></div>
+        </div>
+    </div>
+
+    <script src="js/data.js"></script>
+    <script src="js/sync.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
