@@ -95,3 +95,11 @@ Firestore 规则拒绝了读写。
 浏览器无法加载 Firebase CDN 文件。
 
 解决方式：检查网络是否可以访问 Firebase，或部署到 Firebase Hosting 后再试。
+
+### 6.后面修改代码
+
+在firebase终端中删除以往文件，上传最新文件夹
+
+rm-rf ~/jobtracker_firebase
+cd jobtracker_firebase
+firebase deploy --only hosting --project jobtracker-fcdee
