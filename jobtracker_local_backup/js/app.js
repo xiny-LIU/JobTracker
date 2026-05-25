@@ -9,10 +9,9 @@ const app = {
         if (!this.data.config) this.data.config = { token: '', gistId: '' };
         this.bindTabs();
         this.render();
+        this.data.config = { token: '', gistId: '' };
+        DataStore.set(this.data);
         this.updateSyncBadge();
-        if (this.data.config.token && this.data.config.gistId) {
-            this.backgroundSync();
-        }
     },
 
     bindTabs() {
@@ -23,7 +22,7 @@ const app = {
                 this.switchView(btn.dataset.view);
             });
         });
-        document.getElementById('sync-btn').addEventListener('click', () => this.manualSync());
+        document.getElementById('sync-btn').addEventListener('click', () => this.exportJSON());
 
         // Modal footer 事件委托
         document.getElementById('modal-footer').addEventListener('click', (e) => {
@@ -313,88 +312,22 @@ const app = {
     },
 
     renderSettings() {
-        const cfg = this.data.config || {};
-        const hasToken = !!cfg.token;
-        document.getElementById('sync-config').classList.toggle('hidden', hasToken);
-        document.getElementById('sync-active').classList.toggle('hidden', !hasToken);
-        if (!hasToken) {
-            document.getElementById('github-token').value = cfg.token || '';
-            document.getElementById('gist-id').value = cfg.gistId || '';
-        } else {
-            document.getElementById('sync-gist-id').textContent = cfg.gistId || '自动创建';
-        }
+        this.updateSyncBadge();
     },
 
-    async saveSyncConfig() {
-        const token = document.getElementById('github-token').value.trim();
-        let gistId = document.getElementById('gist-id').value.trim();
-        if (!token) return alert('请输入 Token');
-        try {
-            const ok = await Sync.test(token);
-            if (!ok) throw new Error('Token 无效');
-            if (gistId) {
-                try {
-                    const remote = DataStore.normalize(await Sync.pull(token, gistId));
-                    if (confirm('检测到云端已有数据，是否覆盖本地？')) {
-                        DataStore.set(remote);
-                        this.data = DataStore.get();
-                    }
-                } catch (e) {
-                    await Sync.push(DataStore.get(), token, gistId);
-                }
-            } else {
-                const result = await Sync.push(DataStore.get(), token);
-                gistId = result.gistId;
-            }
-            DataStore.setConfig({ token, gistId });
-            this.data = DataStore.get();
-            this.renderSettings();
-            this.updateSyncBadge();
-            alert('同步配置成功！');
-        } catch (e) {
-            alert('配置失败：' + e.message);
-        }
+    saveSyncConfig() {
+        alert('当前版本已关闭 GitHub Gist 同步。请使用“导出 JSON 备份”和“导入 JSON”迁移数据。');
     },
 
-    async manualSync() {
-        const cfg = this.data.config;
-        if (!cfg.token) { this.switchView('settings'); return; }
-        const btn = document.getElementById('sync-btn');
-        btn.style.opacity = '0.5';
-        try {
-            if (cfg.gistId) {
-                try {
-                    const remote = DataStore.normalize(await Sync.pull(cfg.token, cfg.gistId));
-                    DataStore.set(remote);
-                    this.data = DataStore.get();
-                    this.render();
-                } catch (e) {}
-            }
-            const result = await Sync.push(DataStore.get(), cfg.token, cfg.gistId);
-            if (!cfg.gistId && result.gistId) {
-                DataStore.setConfig({ gistId: result.gistId });
-                this.data = DataStore.get();
-            }
-            this.updateSyncBadge();
-            alert('同步成功');
-        } catch (e) {
-            alert('同步失败：' + e.message);
-        } finally {
-            btn.style.opacity = '1';
-        }
+    manualSync() {
+        this.exportJSON();
     },
 
-    async backgroundSync() {
-        const cfg = this.data.config;
-        if (!cfg.token || !cfg.gistId) return;
-        try {
-            await Sync.push(DataStore.get(), cfg.token, cfg.gistId);
-            this.updateSyncBadge();
-        } catch (e) { console.log('后台同步失败', e); }
+    backgroundSync() {
+        this.updateSyncBadge();
     },
 
     disconnectSync() {
-        if (!confirm('确定断开同步？本地数据保留，Token将被清除。')) return;
         DataStore.setConfig({ token: '', gistId: '' });
         this.data = DataStore.get();
         this.renderSettings();
@@ -402,23 +335,20 @@ const app = {
     },
 
     updateSyncBadge() {
-        const cfg = this.data.config;
         const badge = document.getElementById('sync-status');
-        if (cfg.token && cfg.gistId) {
-            badge.textContent = '已同步';
-            badge.classList.add('synced');
-        } else {
-            badge.textContent = '本地';
-            badge.classList.remove('synced');
-        }
+        badge.textContent = '本地保存';
+        badge.classList.remove('synced');
     },
 
     exportJSON() {
-        const blob = new Blob([JSON.stringify(this.data, null, 2)], { type: 'application/json' });
+        const exportData = DataStore.normalize(this.data);
+        exportData.config = { token: '', gistId: '' };
+        const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
         const a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
         a.download = `jobtracker_${new Date().toISOString().split('T')[0]}.json`;
         a.click();
+        URL.revokeObjectURL(a.href);
     },
 
     importJSON(input) {
@@ -428,13 +358,16 @@ const app = {
         reader.onload = e => {
             try {
                 const data = DataStore.normalize(JSON.parse(e.target.result));
-                if (confirm('导入将覆盖现有数据，确定？')) {
+                data.config = { token: '', gistId: '' };
+                if (confirm('导入会覆盖当前浏览器里的数据，确定继续吗？')) {
                     DataStore.set(data);
                     this.data = DataStore.get();
                     this.render();
                     alert('导入成功');
                 }
-            } catch { alert('文件格式错误'); }
+            } catch (err) {
+                alert('文件格式错误：请选择本项目导出的 JSON 备份文件');
+            }
         };
         reader.readAsText(file);
         input.value = '';
