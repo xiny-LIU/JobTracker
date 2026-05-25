@@ -6,6 +6,7 @@ const app = {
 
     init() {
         this.data = DataStore.get();
+        if (!this.data.config) this.data.config = { token: '', gistId: '' };
         this.bindTabs();
         this.render();
         this.updateSyncBadge();
@@ -23,6 +24,14 @@ const app = {
             });
         });
         document.getElementById('sync-btn').addEventListener('click', () => this.manualSync());
+
+        // Modal footer 事件委托
+        document.getElementById('modal-footer').addEventListener('click', (e) => {
+            const btn = e.target.closest('[data-action]');
+            if (!btn) return;
+            const action = btn.dataset.action;
+            if (this[action]) this[action]();
+        });
     },
 
     switchView(view) {
@@ -119,10 +128,54 @@ const app = {
         }).join('') || '<div style="text-align:center;color:#94a3b8;padding:20px;">暂无记录</div>';
     },
 
+    renderCompaniesSection(search = '') {
+        const container = document.getElementById('company-section');
+        if (!container) return;
+
+        let companies = this.data.companies;
+        if (search) {
+            companies = companies.filter(c => (c.name + c.industry + c.scale + c.notes).toLowerCase().includes(search));
+        }
+
+        if (companies.length === 0) {
+            container.innerHTML = this.data.companies.length === 0
+                ? '<div class="company-empty">还没有公司。请先点击右上角“添加公司”，保存后这里会显示公司卡片。</div>'
+                : '';
+            return;
+        }
+
+        container.innerHTML = `
+            <div class="company-section-title">
+                <span>公司列表（${companies.length}）</span>
+                <span>保存公司后，可在对应公司卡片中继续添加岗位</span>
+            </div>
+            <div class="company-grid">
+                ${companies.map(c => {
+                    const count = this.data.positions.filter(p => p.companyId === c.id).length;
+                    return `<div class="company-card">
+                        <div class="company-card-header">
+                            <div class="card-logo">${(c.name || '公')[0]}</div>
+                            <div>
+                                <div class="company-card-name">${c.name || '未命名公司'}</div>
+                                <div class="company-card-meta">${c.industry || '未知行业'} · ${c.scale || '未知规模'} · ${count} 个岗位</div>
+                            </div>
+                        </div>
+                        ${c.notes ? `<div class="company-card-meta">${c.notes}</div>` : ''}
+                        <div class="company-card-actions">
+                            <button class="card-btn" onclick="app.openPositionModal(null, '${c.id}')">添加岗位</button>
+                            <button class="card-btn" onclick="app.openModal('company', '${c.id}')">编辑公司</button>
+                        </div>
+                    </div>`;
+                }).join('')}
+            </div>`;
+    },
+
     renderPositions() {
         const search = document.getElementById('pos-search').value.toLowerCase();
         const status = document.getElementById('pos-status').value;
         const priority = document.getElementById('pos-priority').value;
+
+        this.renderCompaniesSection(search);
 
         let list = this.data.positions.filter(p => {
             const c = this.getCompany(p.companyId);
@@ -153,6 +206,7 @@ const app = {
                 <div class="card-footer">
                     <span class="card-footer-text">${last ? `最近: ${last.round} ${last.date}` : '暂无面试'}</span>
                     <div class="card-actions">
+                        <button class="card-btn" onclick="event.stopPropagation();app.openPositionModal('${p.id}')">编辑</button>
                         <button class="card-btn" onclick="event.stopPropagation();app.advance('${p.id}')">推进 ➜</button>
                         <button class="card-btn" onclick="event.stopPropagation();app.openInterviewModal('${p.id}')">记面试</button>
                     </div>
@@ -280,12 +334,14 @@ const app = {
             if (!ok) throw new Error('Token 无效');
             if (gistId) {
                 try {
-                    const remote = await Sync.pull(token, gistId);
-                    if (confirm('云端有数据，是否覆盖本地？')) {
+                    const remote = DataStore.normalize(await Sync.pull(token, gistId));
+                    if (confirm('检测到云端已有数据，是否覆盖本地？')) {
                         DataStore.set(remote);
-                        this.data = remote;
+                        this.data = DataStore.get();
                     }
-                } catch (e) {}
+                } catch (e) {
+                    await Sync.push(DataStore.get(), token, gistId);
+                }
             } else {
                 const result = await Sync.push(DataStore.get(), token);
                 gistId = result.gistId;
@@ -306,13 +362,19 @@ const app = {
         const btn = document.getElementById('sync-btn');
         btn.style.opacity = '0.5';
         try {
-            try {
-                const remote = await Sync.pull(cfg.token, cfg.gistId);
-                DataStore.set(remote);
-                this.data = remote;
-                this.render();
-            } catch (e) {}
-            await Sync.push(DataStore.get(), cfg.token, cfg.gistId);
+            if (cfg.gistId) {
+                try {
+                    const remote = DataStore.normalize(await Sync.pull(cfg.token, cfg.gistId));
+                    DataStore.set(remote);
+                    this.data = DataStore.get();
+                    this.render();
+                } catch (e) {}
+            }
+            const result = await Sync.push(DataStore.get(), cfg.token, cfg.gistId);
+            if (!cfg.gistId && result.gistId) {
+                DataStore.setConfig({ gistId: result.gistId });
+                this.data = DataStore.get();
+            }
             this.updateSyncBadge();
             alert('同步成功');
         } catch (e) {
@@ -365,10 +427,10 @@ const app = {
         const reader = new FileReader();
         reader.onload = e => {
             try {
-                const data = JSON.parse(e.target.result);
+                const data = DataStore.normalize(JSON.parse(e.target.result));
                 if (confirm('导入将覆盖现有数据，确定？')) {
                     DataStore.set(data);
-                    this.data = data;
+                    this.data = DataStore.get();
                     this.render();
                     alert('导入成功');
                 }
@@ -392,7 +454,7 @@ const app = {
         this.render();
     },
 
-    openModal(type, id = null) {
+    openModal(type, id = null, presetCompanyId = '') {
         const backdrop = document.getElementById('modal-backdrop');
         const title = document.getElementById('modal-title');
         const body = document.getElementById('modal-body');
@@ -410,12 +472,13 @@ const app = {
                 </div>
                 <div class="form-group"><label>官网</label><input id="m-c-website" value="${c.website||''}"></div>
                 <div class="form-group"><label>备注</label><textarea id="m-c-notes" rows="3">${c.notes||''}</textarea></div>`;
-            footer.innerHTML = `${id?'<button class="btn-danger" onclick="app.deleteCompany()">删除</button>':''}<div style="margin-left:auto;display:flex;gap:8px;"><button class="btn-secondary" onclick="app.closeModal()">取消</button><button class="btn-primary" onclick="app.saveCompany()">保存</button></div>`;
+            footer.innerHTML = `${id?'<button class="btn-danger" data-action="deleteCompany">删除</button>':''}<div style="margin-left:auto;display:flex;gap:8px;"><button class="btn-secondary" data-action="closeModal">取消</button><button class="btn-primary" data-action="saveCompany">保存</button></div>`;
         } else if (type === 'position') {
-            title.textContent = id ? '编辑岗位' : '添加岗位';
-            const p = id ? this.data.positions.find(x => x.id === id) : {};
-            const companyId = p.companyId || id || '';
-            body.innerHTML = `<input type="hidden" id="m-pos-id" value="${id||''}">
+            const p = id ? (this.data.positions.find(x => x.id === id) || {}) : {};
+            const isEdit = !!p.id;
+            title.textContent = isEdit ? '编辑岗位' : '添加岗位';
+            const companyId = p.companyId || presetCompanyId || this.data.companies[0]?.id || '';
+            body.innerHTML = `<input type="hidden" id="m-pos-id" value="${isEdit ? p.id : ''}">
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
                     <div class="form-group"><label>岗位名称 *</label><input id="m-pos-title" value="${p.title||''}"></div>
                     <div class="form-group"><label>所属公司</label><select id="m-pos-company">${this.data.companies.map(c => `<option value="${c.id}" ${companyId===c.id?'selected':''}>${c.name}</option>`).join('')}</select></div>
@@ -432,7 +495,7 @@ const app = {
                 <div class="form-group"><label>岗位JD</label><textarea id="m-pos-jd" rows="4">${p.jd||''}</textarea></div>
                 <div class="form-group"><label>Deadline</label><input type="date" id="m-pos-deadline" value="${p.deadline||''}"></div>`;
             setTimeout(() => this.renderStarInput('m-pos-stars', 'm-pos-priority', p.priority || 3), 0);
-            footer.innerHTML = `${id?'<button class="btn-danger" onclick="app.deletePosition()">删除</button>':''}<div style="margin-left:auto;display:flex;gap:8px;"><button class="btn-secondary" onclick="app.closeModal()">取消</button><button class="btn-primary" onclick="app.savePosition()">保存</button></div>`;
+            footer.innerHTML = `${isEdit?'<button class="btn-danger" data-action="deletePosition">删除</button>':''}<div style="margin-left:auto;display:flex;gap:8px;"><button class="btn-secondary" data-action="closeModal">取消</button><button class="btn-primary" data-action="savePosition">保存</button></div>`;
         } else if (type === 'resume') {
             title.textContent = id ? '编辑资料' : '添加资料';
             const r = id ? this.data.resumes.find(x => x.id === id) : {};
@@ -445,7 +508,7 @@ const app = {
                 <div class="form-group"><label>版本说明</label><input id="m-res-version" value="${r.version||''}"></div>
                 <div class="form-group"><label>内容</label><textarea id="m-res-content" rows="6">${r.content||''}</textarea></div>
                 <div class="form-group"><label>文件名/链接</label><input id="m-res-file" value="${r.fileName||''}"></div>`;
-            footer.innerHTML = `${id?'<button class="btn-danger" onclick="app.deleteResume()">删除</button>':''}<div style="margin-left:auto;display:flex;gap:8px;"><button class="btn-secondary" onclick="app.closeModal()">取消</button><button class="btn-primary" onclick="app.saveResume()">保存</button></div>`;
+            footer.innerHTML = `${id?'<button class="btn-danger" data-action="deleteResume">删除</button>':''}<div style="margin-left:auto;display:flex;gap:8px;"><button class="btn-secondary" data-action="closeModal">取消</button><button class="btn-primary" data-action="saveResume">保存</button></div>`;
         } else if (type === 'interview') {
             const posId = id;
             const ivId = arguments[2] || null;
@@ -464,7 +527,7 @@ const app = {
                 <div class="form-group"><label>情绪</label><div style="display:flex;gap:6px;flex-wrap:wrap;">${['紧张','平稳','超水平发挥','被问懵','一般'].map(m => `<button type="button" class="mood-btn ${(iv.mood||'平稳')===m?'active':''}" onclick="app.setMoodBtn(this)" data-mood="${m}">${m}</button>`).join('')}</div><input type="hidden" id="m-iv-mood" value="${iv.mood||'平稳'}"></div>
                 <div class="form-group"><label>面试问题（每行一个）</label><textarea id="m-iv-questions" rows="4">${iv.questions||''}</textarea></div>
                 <div class="form-group"><label>复盘笔记</label><textarea id="m-iv-notes" rows="4">${iv.notes||''}</textarea></div>`;
-            footer.innerHTML = `${ivId?'<button class="btn-danger" onclick="app.deleteInterview()">删除</button>':''}<div style="margin-left:auto;display:flex;gap:8px;"><button class="btn-secondary" onclick="app.closeModal()">取消</button><button class="btn-primary" onclick="app.saveInterview()">保存</button></div>`;
+            footer.innerHTML = `${ivId?'<button class="btn-danger" data-action="deleteInterview">删除</button>':''}<div style="margin-left:auto;display:flex;gap:8px;"><button class="btn-secondary" data-action="closeModal">取消</button><button class="btn-primary" data-action="saveInterview">保存</button></div>`;
         }
     },
 
@@ -504,12 +567,17 @@ const app = {
 
     deleteCompany() {
         const id = document.getElementById('m-company-id').value;
-        if (!id || !confirm('删除公司将同时删除其下所有岗位，确定？')) return;
+        if (!id || !confirm('删除公司将同时删除其下所有岗位、面试和活动记录，确定？')) return;
+        const positionIds = this.data.positions.filter(p => p.companyId === id).map(p => p.id);
         this.data.companies = this.data.companies.filter(c => c.id !== id);
         this.data.positions = this.data.positions.filter(p => p.companyId !== id);
+        this.data.interviews = this.data.interviews.filter(i => !positionIds.includes(i.positionId));
+        this.data.activities = this.data.activities.filter(a => !positionIds.includes(a.positionId));
         DataStore.set(this.data);
+        this.data = DataStore.get();
         this.closeModal();
         this.render();
+        this.backgroundSync();
     },
 
     savePosition() {
@@ -556,6 +624,7 @@ const app = {
         this.data = DataStore.get();
         this.closeModal();
         this.render();
+        this.backgroundSync();
     },
 
     saveInterview() {
@@ -575,11 +644,25 @@ const app = {
 
     deleteInterview() {
         const id = document.getElementById('m-iv-id').value;
+        const posId = document.getElementById('m-iv-pos').value;
         if (!id || !confirm('确定删除此面试记录？')) return;
         DataStore.deleteInterview(id);
         this.data = DataStore.get();
         this.closeModal();
         this.render();
+        this.backgroundSync();
+        if (!document.getElementById('detail-backdrop').classList.contains('hidden')) {
+            this.openDetail(posId);
+        }
+    },
+
+    openPositionModal(positionId = null, companyId = '') {
+        if (!positionId && this.data.companies.length === 0) {
+            alert('请先添加公司，再添加岗位。');
+            this.openModal('company');
+            return;
+        }
+        this.openModal('position', positionId, companyId);
     },
 
     openInterviewModal(positionId, interviewId = null) {

@@ -222,7 +222,7 @@ body {
 .btn-secondary:hover { background: var(--border); }
 .btn-danger { background: var(--red-light); color: var(--red); }
 .btn-danger:hover { background: #fecaca; }
-.hidden { display: none !important; }
+
 
 /* Filter Bar */
 .filter-bar { display: flex; gap: 10px; margin-bottom: 20px; }
@@ -356,7 +356,15 @@ body {
     opacity: 0; pointer-events: none;
     transition: opacity 0.2s;
 }
-.modal-backdrop:not(.hidden) { opacity: 1; pointer-events: all; }
+.modal-backdrop:not(.hidden) {
+    opacity: 1;
+    pointer-events: all;
+}
+.modal-backdrop.hidden {
+    display: none !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
 .modal {
     background: white;
     border-radius: 16px;
@@ -510,4 +518,85 @@ body {
     .detail-body { grid-template-columns: 1fr; }
     .nav-tabs { display: none; }
     .container { padding: 70px 16px 24px; }
+}
+
+/* hidden utility */
+.hidden { display: none !important; }
+
+/* Company summary cards */
+.section-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.company-section {
+    margin-bottom: 20px;
+}
+
+.company-section-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.company-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+}
+
+.company-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.company-card-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.company-card-name {
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.company-card-meta {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.company-card-actions {
+    display: flex;
+    gap: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
+}
+
+.company-empty {
+    background: var(--card);
+    border: 1px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 18px;
+    color: var(--text-secondary);
+    font-size: 13px;
+    text-align: center;
+}
+
+@media (max-width: 900px) {
+    .company-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 640px) {
+    .section-actions { flex-direction: column; align-items: stretch; width: 100%; }
+    .company-grid { grid-template-columns: 1fr; }
 }

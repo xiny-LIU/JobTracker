@@ -4,13 +4,13 @@ const DataStore = {
     get() {
         try {
             const raw = localStorage.getItem(this.key);
-            if (raw) return JSON.parse(raw);
+            if (raw) return this.normalize(JSON.parse(raw));
         } catch (e) { console.error('读取数据失败', e); }
         return this.getDefault();
     },
 
     set(data) {
-        localStorage.setItem(this.key, JSON.stringify(data));
+        localStorage.setItem(this.key, JSON.stringify(this.normalize(data)));
     },
 
     getDefault() {
@@ -21,6 +21,21 @@ const DataStore = {
             interviews: [],
             activities: [],
             config: { token: '', gistId: '' }
+        };
+    },
+
+    normalize(data) {
+        const base = this.getDefault();
+        const safe = data && typeof data === 'object' ? data : {};
+        return {
+            ...base,
+            ...safe,
+            companies: Array.isArray(safe.companies) ? safe.companies : [],
+            positions: Array.isArray(safe.positions) ? safe.positions : [],
+            resumes: Array.isArray(safe.resumes) ? safe.resumes : [],
+            interviews: Array.isArray(safe.interviews) ? safe.interviews : [],
+            activities: Array.isArray(safe.activities) ? safe.activities : [],
+            config: { ...base.config, ...(safe.config || {}) }
         };
     },
 
@@ -52,7 +67,7 @@ const DataStore = {
         pos.createdAt = new Date().toISOString();
         pos.updatedAt = pos.createdAt;
         data.positions.push(pos);
-        this.addActivity(pos.id, pos.status, '新增投递', pos.createdAt);
+        this.addActivity(pos.id, pos.status, '新增投递', pos.createdAt, data);
         this.set(data);
         return pos;
     },
@@ -65,7 +80,7 @@ const DataStore = {
             const now = new Date().toISOString();
             data.positions[idx] = { ...old, ...updates, updatedAt: now };
             if (updates.status && updates.status !== old.status) {
-                this.addActivity(id, updates.status, `${old.status} → ${updates.status}`, now.split('T')[0]);
+                this.addActivity(id, updates.status, `${old.status} → ${updates.status}`, now.split('T')[0], data);
             }
             this.set(data);
         }
@@ -90,7 +105,7 @@ const DataStore = {
             if (map[interview.round]) {
                 pos.status = map[interview.round];
                 pos.updatedAt = interview.createdAt;
-                this.addActivity(pos.id, pos.status, `${interview.round}完成`, interview.date);
+                this.addActivity(pos.id, pos.status, `${interview.round}完成`, interview.date, data);
             }
         }
         this.set(data);
@@ -137,15 +152,15 @@ const DataStore = {
         this.set(data);
     },
 
-    addActivity(positionId, type, notes, date) {
-        const data = this.get();
+    addActivity(positionId, type, notes, date, currentData = null) {
+        const data = currentData || this.get();
         data.activities.push({
             id: this.uid('a'),
             positionId, type, notes, date,
             createdAt: new Date().toISOString()
         });
         if (data.activities.length > 100) data.activities = data.activities.slice(-100);
-        this.set(data);
+        if (!currentData) this.set(data);
     },
 
     getConfig() {
