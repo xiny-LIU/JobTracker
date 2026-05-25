@@ -21,7 +21,7 @@
             <button class="tab-btn" data-view="settings">设置</button>
         </div>
         <div class="nav-actions">
-            <button id="sync-btn" class="btn-icon" title="导出 JSON 备份">
+            <button id="sync-btn" class="btn-icon" title="上传到 Firebase 云端">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                     <polyline points="17 8 12 3 7 8"></polyline>
@@ -162,8 +162,21 @@
             </div>
             <div class="settings-panel">
                 <div class="setting-card">
+                    <h3>Firebase 云同步</h3>
+                    <p class="setting-desc">使用 Google 登录后，可以把本地数据上传到 Cloud Firestore，也可以从云端拉取数据到当前浏览器。</p>
+                    <div id="firebase-status" class="setting-desc">正在检测 Firebase 状态...</div>
+                    <div class="form-actions">
+                        <button class="btn-primary" onclick="app.firebaseLogin()">Google 登录</button>
+                        <button class="btn-secondary" onclick="app.uploadFirebase()">上传到云端</button>
+                        <button class="btn-secondary" onclick="app.downloadFirebase()">从云端拉取</button>
+                        <button class="btn-danger" onclick="app.firebaseLogout()">退出登录</button>
+                    </div>
+                    <span class="hint">建议先点击“上传到云端”保存当前浏览器数据；换设备后先登录同一个 Google 账号，再点击“从云端拉取”。</span>
+                </div>
+
+                <div class="setting-card">
                     <h3>本地备份与迁移</h3>
-                    <p class="setting-desc">数据保存在当前浏览器中。换电脑或换浏览器时，先导出 JSON 备份，再在新设备导入。</p>
+                    <p class="setting-desc">数据仍会保存在当前浏览器中。Firebase 出问题时，可以用 JSON 文件手动备份。</p>
 
                     <div class="form-actions">
                         <button class="btn-primary" onclick="app.exportJSON()">导出 JSON 备份</button>
@@ -177,7 +190,7 @@
 
                 <div class="setting-card">
                     <h3>数据管理</h3>
-                    <p class="setting-desc">当前所有数据仅存储在浏览器本地。</p>
+                    <p class="setting-desc">当前数据优先保存在浏览器本地，云端同步需要手动点击上传或拉取。</p>
                     <div class="form-actions">
                         <button class="btn-secondary" onclick="app.loadDemoData()">加载演示数据</button>
                         <button class="btn-danger" onclick="app.clearAllData()">清空所有数据</button>
@@ -223,6 +236,7 @@
     </div>
 
     <script src="js/data.js"></script>
+    <script type="module" src="js/firebase-store.js"></script>
     <script src="js/app.js"></script>
 </body>
 </html>

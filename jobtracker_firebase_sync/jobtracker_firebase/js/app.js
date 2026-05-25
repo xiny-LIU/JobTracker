@@ -9,9 +9,16 @@ const app = {
         if (!this.data.config) this.data.config = { token: '', gistId: '' };
         this.bindTabs();
         this.render();
-        this.data.config = { token: '', gistId: '' };
-        DataStore.set(this.data);
         this.updateSyncBadge();
+
+        window.addEventListener('firebase-ready', () => {
+            this.renderSettings();
+            this.updateSyncBadge();
+        });
+        window.addEventListener('firebase-auth-changed', () => {
+            this.renderSettings();
+            this.updateSyncBadge();
+        });
     },
 
     bindTabs() {
@@ -22,7 +29,7 @@ const app = {
                 this.switchView(btn.dataset.view);
             });
         });
-        document.getElementById('sync-btn').addEventListener('click', () => this.exportJSON());
+        document.getElementById('sync-btn').addEventListener('click', () => this.uploadFirebase());
 
         // Modal footer 事件委托
         document.getElementById('modal-footer').addEventListener('click', (e) => {
@@ -312,15 +319,113 @@ const app = {
     },
 
     renderSettings() {
+        const status = document.getElementById('firebase-status');
+        if (!status) return;
+
+        if (!window.FirebaseStore) {
+            status.textContent = 'Firebase SDK 还没有加载完成。请确认当前设备可以访问 Firebase，并优先使用本地服务器打开页面。';
+            this.updateSyncBadge();
+            return;
+        }
+
+        const user = window.FirebaseStore.getUser();
+        if (user) {
+            status.textContent = `已登录：${user.email || '未知账号'}。可以上传或拉取云端数据。`;
+        } else {
+            status.textContent = '未登录。请先点击“Google 登录”，再进行上传或拉取。';
+        }
         this.updateSyncBadge();
     },
 
+    async firebaseLogin() {
+        if (!window.FirebaseStore) {
+            alert('Firebase SDK 还没有加载完成。请检查网络，或使用本地服务器方式打开页面。');
+            return;
+        }
+
+        try {
+            await window.FirebaseStore.signIn();
+            this.renderSettings();
+            this.updateSyncBadge();
+            alert('登录成功');
+        } catch (e) {
+            alert('登录失败：' + this.explainFirebaseError(e));
+        }
+    },
+
+    async firebaseLogout() {
+        if (!window.FirebaseStore) return;
+        try {
+            await window.FirebaseStore.signOut();
+            this.renderSettings();
+            this.updateSyncBadge();
+            alert('已退出登录');
+        } catch (e) {
+            alert('退出失败：' + this.explainFirebaseError(e));
+        }
+    },
+
+    async uploadFirebase() {
+        if (!window.FirebaseStore) {
+            this.switchView('settings');
+            alert('Firebase SDK 还没有加载完成。请检查网络，或使用本地服务器方式打开页面。');
+            return;
+        }
+
+        if (!window.FirebaseStore.getUser()) {
+            this.switchView('settings');
+            alert('请先在设置页点击“Google 登录”。');
+            return;
+        }
+
+        try {
+            this.data = DataStore.get();
+            await window.FirebaseStore.upload(DataStore.normalize(this.data));
+            this.updateSyncBadge();
+            alert('已上传到 Firebase 云端');
+        } catch (e) {
+            alert('上传失败：' + this.explainFirebaseError(e));
+        }
+    },
+
+    async downloadFirebase() {
+        if (!window.FirebaseStore) {
+            alert('Firebase SDK 还没有加载完成。请检查网络，或使用本地服务器方式打开页面。');
+            return;
+        }
+
+        if (!window.FirebaseStore.getUser()) {
+            alert('请先点击“Google 登录”。');
+            return;
+        }
+
+        try {
+            const remote = await window.FirebaseStore.download();
+            if (!remote) {
+                alert('云端还没有数据。请先在有数据的设备上点击“上传到云端”。');
+                return;
+            }
+
+            if (confirm('从云端拉取会覆盖当前浏览器里的本地数据，确定继续吗？')) {
+                const data = DataStore.normalize(remote);
+                data.config = { token: '', gistId: '' };
+                DataStore.set(data);
+                this.data = DataStore.get();
+                this.render();
+                this.updateSyncBadge();
+                alert('已从 Firebase 云端拉取数据');
+            }
+        } catch (e) {
+            alert('拉取失败：' + this.explainFirebaseError(e));
+        }
+    },
+
     saveSyncConfig() {
-        alert('当前版本已关闭 GitHub Gist 同步。请使用“导出 JSON 备份”和“导入 JSON”迁移数据。');
+        alert('当前版本使用 Firebase 云同步，不再使用 GitHub Gist。');
     },
 
     manualSync() {
-        this.exportJSON();
+        this.uploadFirebase();
     },
 
     backgroundSync() {
@@ -328,16 +433,41 @@ const app = {
     },
 
     disconnectSync() {
-        DataStore.setConfig({ token: '', gistId: '' });
-        this.data = DataStore.get();
-        this.renderSettings();
-        this.updateSyncBadge();
+        this.firebaseLogout();
     },
 
     updateSyncBadge() {
         const badge = document.getElementById('sync-status');
-        badge.textContent = '本地保存';
-        badge.classList.remove('synced');
+        const user = window.FirebaseStore?.getUser?.();
+        if (user) {
+            badge.textContent = 'Firebase';
+            badge.classList.add('synced');
+        } else {
+            badge.textContent = '本地保存';
+            badge.classList.remove('synced');
+        }
+    },
+
+    explainFirebaseError(error) {
+        const code = error?.code || '';
+        const message = error?.message || String(error);
+
+        if (code.includes('auth/unauthorized-domain')) {
+            return '当前网址没有加入 Firebase Authentication 的授权域名。请在 Firebase 控制台的 Authentication → Settings → Authorized domains 中加入当前域名。';
+        }
+        if (code.includes('auth/popup-blocked')) {
+            return '浏览器拦截了登录弹窗。请允许弹窗后重试。';
+        }
+        if (code.includes('auth/popup-closed-by-user')) {
+            return '登录弹窗被关闭了。请重新点击 Google 登录。';
+        }
+        if (code.includes('permission-denied')) {
+            return 'Firestore 权限规则拒绝了本次读写。请检查规则是否允许 users/{uid}/jobtracker/main 路径。';
+        }
+        if (message.includes('Failed to fetch') || message.includes('network')) {
+            return '网络无法连接 Firebase。请检查网络或代理。';
+        }
+        return message;
     },
 
     exportJSON() {
