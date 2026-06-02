@@ -285,6 +285,8 @@ const app = {
         document.getElementById('resumes-grid').innerHTML = list.map(r => {
             const linked = this.data.positions.filter(p => p.resumeId === r.id).length;
             const resumeId = this.inlineArg(r.id);
+            const fileDownloadBtn = r.fileData ? `<button class="card-btn" onclick="app.downloadFile('${resumeId}', '${this.escapeJSString(r.fileName || '文件')}')">⬇️ 下载</button>` : '';
+            const filePreviewBtn = r.fileData ? `<button class="card-btn" onclick="app.previewFile('${resumeId}')">👁️ 预览</button>` : '';
             return `<div class="resume-card">
                 <div class="resume-header">
                     <div style="display:flex;gap:10px;align-items:center;">
@@ -296,12 +298,65 @@ const app = {
                 ${r.version ? `<div class="resume-version">${this.escapeHTML(r.version)}</div>` : ''}
                 <div class="resume-content">${this.escapeHTML(r.content || '无内容')}</div>
                 <div class="resume-footer"><span>${linked} 个岗位关联</span>${r.fileName ? `<span>📎 ${this.escapeHTML(r.fileName)}</span>` : ''}</div>
+                <div style="display:flex;gap:6px;">${filePreviewBtn}${fileDownloadBtn}</div>
             </div>`;
         }).join('') || '<div style="grid-column:1/-1;text-align:center;color:#94a3b8;padding:40px;">暂无资料</div>';
 
         document.querySelectorAll('.sidebar-btn').forEach(b => {
             b.classList.toggle('active', b.dataset.cat === this.resumeFilter);
         });
+    },
+
+    previewFile(resumeId) {
+        const resume = this.data.resumes.find(r => r.id === resumeId);
+        if (!resume || !resume.fileData) {
+            alert('文件不存在或已损坏');
+            return;
+        }
+
+        const fileName = resume.fileName || '文件';
+        const ext = fileName.substring(fileName.lastIndexOf('.') + 1).toLowerCase();
+        
+        // 支持直接预览的文件类型
+        if (['pdf', 'jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) {
+            const win = window.open();
+            win.document.write(`
+                <html>
+                <head>
+                    <title>${this.escapeHTML(fileName)}</title>
+                    <style>
+                        body { margin: 0; padding: 0; background: #f0f0f0; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+                        img { max-width: 100%; max-height: 100vh; }
+                        embed { width: 100%; height: 100vh; }
+                    </style>
+                </head>
+                <body>
+            `);
+            
+            if (ext === 'pdf') {
+                win.document.write(`<embed src="${resume.fileData}" type="application/pdf" /></body></html>`);
+            } else {
+                win.document.write(`<img src="${resume.fileData}" /></body></html>`);
+            }
+            win.document.close();
+            return;
+        }
+        
+        // 其他文件类型无法预览，提示用户下载
+        alert(`不支持在线预览 ${ext.toUpperCase()} 文件，请下载后使用相应软件打开`);
+    },
+
+    downloadFile(resumeId, fileName) {
+        const resume = this.data.resumes.find(r => r.id === resumeId);
+        if (!resume || !resume.fileData) {
+            alert('文件不存在或已损坏');
+            return;
+        }
+        
+        const link = document.createElement('a');
+        link.href = resume.fileData;
+        link.download = fileName;
+        link.click();
     },
 
     filterResumes(cat) {
@@ -518,6 +573,11 @@ const app = {
     exportJSON() {
         const exportData = DataStore.normalize(this.data);
         exportData.config = { token: '', gistId: '' };
+        // 导出时剥离文件数据，减小导出文件大小
+        exportData.resumes = exportData.resumes.map(r => {
+            const { fileData, ...rest } = r;
+            return rest;
+        });
         const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
         const a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
@@ -563,6 +623,12 @@ const app = {
     },
 
     openModal(type, id = null, presetCompanyId = '') {
+        // 如果详情页打开了，先关闭它
+        const detailBackdrop = document.getElementById('detail-backdrop');
+        if (detailBackdrop && !detailBackdrop.classList.contains('hidden')) {
+            this.closeDetail();
+        }
+
         const backdrop = document.getElementById('modal-backdrop');
         const title = document.getElementById('modal-title');
         const body = document.getElementById('modal-body');
@@ -607,6 +673,7 @@ const app = {
         } else if (type === 'resume') {
             title.textContent = id ? '编辑资料' : '添加资料';
             const r = id ? this.data.resumes.find(x => x.id === id) : {};
+            const fileStatusDisplay = r.fileData ? `✓ 已有文件: ${this.escapeHTML(r.fileName || '文件')}` : '未上传文件';
             body.innerHTML = `<input type="hidden" id="m-res-id" value="${this.escapeHTML(id || '')}">
                 <div class="form-group"><label>资料名称 *</label><input id="m-res-name" value="${this.escapeHTML(r.name || '')}"></div>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
@@ -615,7 +682,13 @@ const app = {
                 </div>
                 <div class="form-group"><label>版本说明</label><input id="m-res-version" value="${this.escapeHTML(r.version || '')}"></div>
                 <div class="form-group"><label>内容</label><textarea id="m-res-content" rows="6">${this.escapeHTML(r.content || '')}</textarea></div>
-                <div class="form-group"><label>文件名/链接</label><input id="m-res-file" value="${this.escapeHTML(r.fileName || '')}"></div>`;
+                <div class="form-group">
+                    <label>上传文件（PDF、Word、图片等）</label>
+                    <input type="file" id="m-res-file-input" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif,.txt,.xlsx,.xls" onchange="app.handleFileSelect(event)">
+                    <div id="file-status" style="font-size:12px;color:#64748b;margin-top:4px;">${fileStatusDisplay}</div>
+                </div>
+                <input type="hidden" id="m-res-file" value="${this.escapeHTML(r.fileName || '')}">
+                <input type="hidden" id="m-res-file-data" value="">`;
             footer.innerHTML = `${id?'<button class="btn-danger" data-action="deleteResume">删除</button>':''}<div style="margin-left:auto;display:flex;gap:8px;"><button class="btn-secondary" data-action="closeModal">取消</button><button class="btn-primary" data-action="saveResume">保存</button></div>`;
         } else if (type === 'interview') {
             const posId = id;
@@ -716,13 +789,51 @@ const app = {
         const id = document.getElementById('m-res-id').value;
         const name = document.getElementById('m-res-name').value.trim();
         if (!name) return alert('请输入资料名称');
-        const data = { name, type: document.getElementById('m-res-type').value, target: document.getElementById('m-res-target').value.trim(), version: document.getElementById('m-res-version').value.trim(), content: document.getElementById('m-res-content').value.trim(), fileName: document.getElementById('m-res-file').value.trim() };
+        
+        const newFileData = document.getElementById('m-res-file-data').value;
+        const existingResume = id ? this.data.resumes.find(r => r.id === id) : null;
+        
+        const data = { 
+            name, 
+            type: document.getElementById('m-res-type').value, 
+            target: document.getElementById('m-res-target').value.trim(), 
+            version: document.getElementById('m-res-version').value.trim(), 
+            content: document.getElementById('m-res-content').value.trim(), 
+            fileName: document.getElementById('m-res-file').value.trim(),
+            // 如果有新文件数据就用新的，否则保留原有的
+            fileData: newFileData || (existingResume?.fileData || '')
+        };
+        
         if (id) DataStore.updateResume(id, data);
         else DataStore.addResume(data);
         this.data = DataStore.get();
         this.closeModal();
         this.render();
         this.backgroundSync();
+    },
+
+    handleFileSelect(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        
+        const maxSize = 5 * 1024 * 1024; // 5MB限制
+        if (file.size > maxSize) {
+            alert('文件大小不能超过5MB');
+            event.target.value = '';
+            return;
+        }
+        
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const fileData = e.target.result;
+            document.getElementById('m-res-file').value = file.name;
+            document.getElementById('m-res-file-data').value = fileData;
+            document.getElementById('file-status').textContent = `✓ 已选择: ${file.name} (${(file.size / 1024).toFixed(2)}KB)`;
+        };
+        reader.onerror = () => {
+            alert('文件读取失败');
+        };
+        reader.readAsDataURL(file);
     },
 
     deleteResume() {
@@ -817,7 +928,7 @@ const app = {
             </div>
             <div class="detail-sidebar">
                 <div class="panel"><h4 style="font-size:14px;font-weight:700;margin-bottom:12px;">公司信息</h4><div style="font-size:13px;color:#475569;"><div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span>行业</span><span>${this.escapeHTML(c?.industry||'-')}</span></div><div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span>规模</span><span>${this.escapeHTML(c?.scale||'-')}</span></div><div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span>官网</span><a href="${this.escapeHTML(website)}" target="_blank" rel="noopener noreferrer" style="color:#3b82f6;">${website !== '#' ? '链接' : '-'}</a></div>${c?.notes ? `<div style="margin-top:8px;padding-top:8px;border-top:1px solid #e2e8f0;font-size:12px;line-height:1.5;">${this.escapeHTML(c.notes)}</div>` : ''}</div></div>
-                <div class="panel"><h4 style="font-size:14px;font-weight:700;margin-bottom:12px;">关联资料</h4>${r ? `<div style="display:flex;align-items:center;gap:8px;padding:8px;background:#f8fafc;border-radius:6px;"><span style="font-size:20px;">📄</span><div><div style="font-size:13px;font-weight:600;">${this.escapeHTML(r.name)}</div><div style="font-size:11px;color:#64748b;">${this.escapeHTML(r.version||'')}</div></div></div>` : '<div style="font-size:13px;color:#94a3b8;">未关联</div>'}</div>
+                <div class="panel"><h4 style="font-size:14px;font-weight:700;margin-bottom:12px;">关联资料</h4>${r ? `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px;background:#f8fafc;border-radius:6px;"><div style="display:flex;align-items:center;gap:8px;flex:1;"><span style="font-size:20px;">📄</span><div><div style="font-size:13px;font-weight:600;">${this.escapeHTML(r.name)}</div><div style="font-size:11px;color:#64748b;">${this.escapeHTML(r.version||'')}</div></div></div>${r.fileData ? `<div style="display:flex;gap:4px;"><button class="card-btn" onclick="app.previewFile('${this.inlineArg(r.id)}')">👁️</button><button class="card-btn" onclick="app.downloadFile('${this.inlineArg(r.id)}', '${this.escapeJSString(r.fileName || '文件')}')">⬇️</button></div>` : ''}</div>` : '<div style="font-size:13px;color:#94a3b8;">未关联</div>'}</div>
                 <div class="panel"><h4 style="font-size:14px;font-weight:700;margin-bottom:12px;">面试记录</h4>${ivs.map(i => `<div class="interview-card" onclick="app.openInterviewModal('${safePositionId}', '${this.inlineArg(i.id)}')"><div class="interview-header"><span class="interview-round">${this.escapeHTML(i.round)}</span><span class="interview-result ${i.result==='通过'?'pass':i.result==='挂'?'fail':'pending'}">${this.escapeHTML(i.result)}</span></div><div class="interview-meta">${this.escapeHTML(i.date)} · ${this.escapeHTML(i.interviewer||'未知')}</div><div class="interview-tags"><span class="tag tag-mood">${this.escapeHTML(i.mood)}</span><span class="tag tag-rating">${this.escapeHTML(i.selfRating)}星</span></div></div>`).join('') || '<div style="font-size:13px;color:#94a3b8;">暂无记录</div>'}</div>
             </div>
         `;
