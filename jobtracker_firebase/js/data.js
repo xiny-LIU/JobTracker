@@ -10,7 +10,12 @@ const DataStore = {
     },
 
     set(data) {
-        localStorage.setItem(this.key, JSON.stringify(this.normalize(data)));
+        try {
+            localStorage.setItem(this.key, JSON.stringify(this.normalize(data)));
+        } catch (e) {
+            console.error('保存数据失败', e);
+            throw new Error('保存失败：浏览器本地存储不可用或空间不足，请先导出备份并清理浏览器存储。');
+        }
     },
 
     getDefault() {
