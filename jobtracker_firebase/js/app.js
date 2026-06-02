@@ -5,6 +5,8 @@ const app = {
     resumeFilter: 'all',
     expandedCompanyIds: new Set(),
     renderedCompanyIds: [],
+    companySortable: null,
+    lastPositionFilterKey: '',
 
     init() {
         this.data = DataStore.get();
@@ -133,6 +135,26 @@ const app = {
         return new Date(dates[0].time).toLocaleDateString('zh-CN');
     },
 
+    getCompanyMetaText(company) {
+        const parts = [
+            company.industry || '未知行业',
+            company.scale || '未知规模'
+        ];
+        if (company.city) parts.push(company.city);
+        return parts.join(' · ');
+    },
+
+    formatJobCount(count) {
+        return `${count} 个岗位`;
+    },
+
+    isCompanyOrderingDisabled() {
+        const search = document.getElementById('pos-search')?.value.trim();
+        const status = document.getElementById('pos-status')?.value;
+        const priority = document.getElementById('pos-priority')?.value;
+        return Boolean(search || status || priority);
+    },
+
     safeBadgeClass(value) {
         const allowed = new Set(['未投递', '投递', '笔试', '一面', '二面', '三面', 'HR面', 'Offer', '拒绝', '接受']);
         return allowed.has(value) ? value : '未投递';
@@ -153,6 +175,7 @@ const app = {
         const now = new Date();
         const weekAgo = new Date(now - 7 * 86400000);
         const total = this.data.positions.length;
+        const delivered = this.data.positions.filter(p => p.status !== '未投递').length;
         const interviewing = this.data.positions.filter(p => ['一面','二面','三面','HR面'].includes(p.status)).length;
         const offers = this.data.positions.filter(p => ['Offer','接受'].includes(p.status)).length;
         const followUp = this.data.positions.filter(p => {
@@ -164,23 +187,23 @@ const app = {
         document.getElementById('stat-interviewing').textContent = interviewing;
         document.getElementById('stat-offers').textContent = offers;
         document.getElementById('stat-followup').textContent = followUp;
+        const deliveredEl = document.getElementById('stat-delivered');
+        if (deliveredEl) deliveredEl.textContent = delivered;
 
-        // Funnel
-        const stages = ['未投递', '投递', '笔试', '一面', '二面', '三面', 'HR面', 'Offer'];
-        const counts = stages.map(s => this.data.positions.filter(p => {
-            const idx = stages.indexOf(p.status);
-            return idx >= stages.indexOf(s) && p.status !== '拒绝';
-        }).length);
+        // 状态分布
+        const stages = ['未投递', '投递', '笔试', '一面', '二面', '三面', 'HR面', 'Offer', '拒绝', '接受'];
+        const normStatus = p => stages.includes(p.status) ? p.status : '未投递';
+        const counts = stages.map(s => this.data.positions.filter(p => normStatus(p) === s).length);
         const max = Math.max(...counts, 1);
-        const colors = ['#94a3b8', '#f59e0b', '#3b82f6', '#8b5cf6', '#ec4899', '#10b981', '#059669'];
+        const colors = ['#94a3b8', '#f59e0b', '#3b82f6', '#8b5cf6', '#ec4899', '#10b981', '#059669', '#0ea5e9', '#ef4444', '#0f766e'];
 
         document.getElementById('funnel-container').innerHTML = stages.map((s, i) => {
-            const prev = i > 0 ? counts[i-1] : counts[i];
-            const conv = i > 0 && prev > 0 ? Math.round((counts[i]/prev)*100) : '-';
+            const count = counts[i];
+            const percent = total ? Math.round((count / total) * 100) : 0;
             return `<div class="funnel-row">
                 <div class="funnel-label">${s}</div>
-                <div class="funnel-bar-wrap"><div class="funnel-bar" style="width:${(counts[i]/max)*100}%;background:${colors[i]}">${counts[i]}</div></div>
-                <div class="funnel-rate">${conv}%</div>
+                <div class="funnel-bar-wrap"><div class="funnel-bar" style="width:${(count/max)*100}%;background:${colors[i]}">${count}</div></div>
+                <div class="funnel-rate">${percent}%</div>
             </div>`;
         }).join('');
 
@@ -276,6 +299,8 @@ const app = {
         const search = document.getElementById('pos-search').value.toLowerCase();
         const status = document.getElementById('pos-status').value;
         const priority = document.getElementById('pos-priority').value;
+        const isOrderingDisabled = Boolean(search.trim() || status || priority);
+        const filterKey = `${search.trim()}|${status}|${priority}`;
 
         const filterJobs = (jobs, companyMatched = false) => {
             let filtered = [...jobs];
@@ -299,6 +324,12 @@ const app = {
             return companyMatched || filteredJobs.length > 0;
         });
         this.renderedCompanyIds = companies.map(c => c.id);
+        if (filterKey !== this.lastPositionFilterKey) {
+            if (isOrderingDisabled) {
+                this.renderedCompanyIds.forEach(id => this.expandedCompanyIds.add(id));
+            }
+            this.lastPositionFilterKey = filterKey;
+        }
 
         // 生成公司及其岗位的HTML
         let html = '';
@@ -307,17 +338,26 @@ const app = {
         } else if (companies.length === 0) {
             html = '<div style="grid-column:1/-1;text-align:center;color:#94a3b8;padding:20px;">没有符合条件的公司</div>';
         } else {
-            html = companies.map(c => {
+            html = companies.map((c, index) => {
                 const isExpanded = this.expandedCompanyIds.has(c.id);
                 const allCompanyJobs = this.getCompanyJobs(c.id);
                 const jobCount = allCompanyJobs.length;
                 const companyId = this.inlineArg(c.id);
+                const companyDomId = this.escapeHTML(c.id);
+                const isFirst = index === 0;
+                const isLast = index === companies.length - 1;
                 const companyHaystack = `${c.name || ''}${c.industry || ''}${c.scale || ''}${c.city || ''}${c.notes || ''}`.toLowerCase();
                 const companyMatched = search && companyHaystack.includes(search);
                 const companyJobs = filterJobs(allCompanyJobs, companyMatched);
                 const highestStatus = this.getCompanyHighestStatus(c);
                 const badgeClass = this.safeBadgeClass(highestStatus);
                 const lastUpdated = this.getCompanyLastUpdated(c);
+                const lastUpdatedText = lastUpdated === '暂无更新' ? lastUpdated : `最近更新：${lastUpdated}`;
+                const companyMeta = this.getCompanyMetaText(c);
+                const jobCountText = this.formatJobCount(jobCount);
+                const dragDisabledClass = isOrderingDisabled ? ' disabled' : '';
+                const upDisabled = isOrderingDisabled || isFirst ? 'disabled' : '';
+                const downDisabled = isOrderingDisabled || isLast ? 'disabled' : '';
                 
                 // 渲染岗位卡片
                 const jobsHtml = companyJobs.map(p => {
@@ -347,30 +387,35 @@ const app = {
                             </div>
                         </div>
                     </div>`;
-                }).join('') || '<div style="padding:20px;text-align:center;color:#94a3b8;font-size:13px;">暂无岗位，点击添加岗位创建第一个岗位</div>';
+                }).join('') || '<div class="expanded-jobs-empty">暂无岗位，点击添加岗位创建第一个岗位</div>';
                 
-                return `<div class="company-accordion-item">
+                return `<div class="company-accordion-item" data-company-id="${companyDomId}">
                 <div class="company-card company-accordion-card ${isExpanded ? 'expanded' : ''}" onclick="app.toggleCompanyJobs('${companyId}', event)">
                     <div class="company-card-header company-accordion-header">
                         <div class="company-title-block">
+                            <button class="drag-handle${dragDisabledClass}" title="${isOrderingDisabled ? '筛选状态下不可排序' : '拖拽排序'}" onclick="event.stopPropagation()">☰</button>
                             <div class="card-logo">${this.escapeHTML((c.name || '公')[0])}</div>
                             <div>
                                 <div class="company-card-name">${this.escapeHTML(c.name || '未命名公司')}</div>
-                                <div class="company-card-meta">${this.escapeHTML(c.industry || '未知行业')} · ${this.escapeHTML(c.scale || '未知规模')} · ${this.escapeHTML(c.city || '未知城市')}</div>
+                                <div class="company-card-meta">${this.escapeHTML(companyMeta)}</div>
                             </div>
                         </div>
-                        <button class="company-toggle-btn" onclick="event.stopPropagation();app.toggleCompanyJobs('${companyId}', event)">${isExpanded ? '收起岗位' : '展开岗位'}</button>
-                    </div>
-                    <div class="company-summary-row">
-                        <span>${jobCount} 个岗位</span>
-                        <span class="activity-badge badge-${badgeClass}">${this.escapeHTML(highestStatus)}</span>
-                        <span>最近更新：${this.escapeHTML(lastUpdated)}</span>
+                        <div class="company-summary-row">
+                            <span>${this.escapeHTML(jobCountText)}</span>
+                            <span class="activity-badge badge-${badgeClass}">${this.escapeHTML(highestStatus)}</span>
+                            <span>${this.escapeHTML(lastUpdatedText)}</span>
+                        </div>
+                        <div class="company-header-actions" onclick="event.stopPropagation()">
+                            <button class="card-btn" onclick="event.stopPropagation();app.openPositionModal(null, '${companyId}')">添加岗位</button>
+                            <button class="card-btn" onclick="event.stopPropagation();app.openModal('company', '${companyId}')">编辑公司</button>
+                            <div class="company-order-actions">
+                                <button class="company-order-btn" ${upDisabled} onclick="event.stopPropagation();app.moveCompanyOrder('${companyId}', -1, event)">▲</button>
+                                <button class="company-order-btn" ${downDisabled} onclick="event.stopPropagation();app.moveCompanyOrder('${companyId}', 1, event)">▼</button>
+                            </div>
+                            <button class="company-toggle-btn" onclick="event.stopPropagation();app.toggleCompanyJobs('${companyId}', event)">${isExpanded ? '收起岗位' : '展开岗位'}</button>
+                        </div>
                     </div>
                     ${c.notes ? `<div class="company-card-meta company-notes">${this.escapeHTML(c.notes)}</div>` : ''}
-                    <div class="company-card-actions" onclick="event.stopPropagation()">
-                        <button class="card-btn" onclick="event.stopPropagation();app.openPositionModal(null, '${companyId}')">添加岗位</button>
-                        <button class="card-btn" onclick="event.stopPropagation();app.openModal('company', '${companyId}')">编辑公司</button>
-                    </div>
                 </div>
                     ${isExpanded ? `<div class="expanded-jobs-wrapper" onclick="event.stopPropagation()">
                         <div class="expanded-jobs-grid">${jobsHtml}</div>
@@ -379,7 +424,8 @@ const app = {
             }).join('');
         }
         
-        document.getElementById('positions-grid').innerHTML = html;
+        document.getElementById('company-accordion-list').innerHTML = html;
+        this.initCompanySortable();
     },
 
     toggleCompanyJobs(companyId, event) {
@@ -402,6 +448,73 @@ const app = {
         this.renderPositions();
     },
 
+    initCompanySortable() {
+        const list = document.getElementById('company-accordion-list');
+        if (this.companySortable) {
+            this.companySortable.destroy();
+            this.companySortable = null;
+        }
+        if (!list || this.currentView !== 'positions' || this.isCompanyOrderingDisabled()) return;
+        if (!window.Sortable) {
+            console.warn('SortableJS 未加载，公司拖拽排序暂不可用。');
+            return;
+        }
+
+        this.companySortable = Sortable.create(list, {
+            handle: '.drag-handle',
+            animation: 180,
+            ghostClass: 'sortable-ghost',
+            chosenClass: 'sortable-chosen',
+            onEnd: () => this.persistCompanyOrderFromDOM()
+        });
+    },
+
+    persistCompanyOrderFromDOM() {
+        const list = document.getElementById('company-accordion-list');
+        if (!list || this.isCompanyOrderingDisabled()) {
+            this.renderPositions();
+            return;
+        }
+
+        const orderedIds = Array.from(list.querySelectorAll('[data-company-id]'))
+            .map(item => item.dataset.companyId)
+            .filter(Boolean);
+        if (!orderedIds.length) return;
+
+        this.data = DataStore.get();
+        this.data.companies = this.data.companies.map(company => {
+            const index = orderedIds.indexOf(company.id);
+            return index >= 0 ? { ...company, order: index * 10 } : company;
+        });
+        DataStore.set(this.data);
+        this.data = DataStore.get();
+        this.renderPositions();
+        this.backgroundSync();
+    },
+
+    moveCompanyOrder(companyId, direction, event) {
+        if (event) event.stopPropagation();
+        if (this.isCompanyOrderingDisabled()) return;
+
+        const companies = this.getSortedCompanies();
+        const currentIndex = companies.findIndex(company => company.id === companyId);
+        const targetIndex = currentIndex + direction;
+        if (currentIndex < 0 || targetIndex < 0 || targetIndex >= companies.length) return;
+
+        const reordered = [...companies];
+        [reordered[currentIndex], reordered[targetIndex]] = [reordered[targetIndex], reordered[currentIndex]];
+        const orderMap = new Map(reordered.map((company, index) => [company.id, index * 10]));
+
+        this.data = DataStore.get();
+        this.data.companies = this.data.companies.map(company => (
+            orderMap.has(company.id) ? { ...company, order: orderMap.get(company.id) } : company
+        ));
+        DataStore.set(this.data);
+        this.data = DataStore.get();
+        this.renderPositions();
+        this.backgroundSync();
+    },
+
     advance(id) {
         const p = this.data.positions.find(x => x.id === id);
         const flow = ['未投递', '投递', '笔试', '一面', '二面', '三面', 'HR面', 'Offer'];
@@ -410,7 +523,7 @@ const app = {
             DataStore.updatePosition(id, { status: flow[idx + 1] });
             this.data = DataStore.get();
             this.renderPositions();
-            this.updateSyncBadge();
+            this.backgroundSync();
         }
     },
 
@@ -620,16 +733,21 @@ const app = {
         }
     },
 
-    async uploadFirebase() {
+    async uploadFirebase(options = {}) {
+        const silent = options.silent === true;
         if (!window.FirebaseStore) {
-            this.switchView('settings');
-            alert('Firebase SDK 还没有加载完成。请检查网络，或使用本地服务器方式打开页面。');
+            if (!silent) {
+                this.switchView('settings');
+                alert('Firebase SDK 还没有加载完成。请检查网络，或使用本地服务器方式打开页面。');
+            }
             return;
         }
 
         if (!window.FirebaseStore.getUser()) {
-            this.switchView('settings');
-            alert('请先在设置页点击“Google 登录”。');
+            if (!silent) {
+                this.switchView('settings');
+                alert('请先在设置页点击“Google 登录”。');
+            }
             return;
         }
 
@@ -637,9 +755,13 @@ const app = {
             this.data = DataStore.get();
             await window.FirebaseStore.upload(DataStore.normalize(this.data));
             this.updateSyncBadge();
-            alert('已上传到 Firebase 云端');
+            if (!silent) alert('已上传到 Firebase 云端');
         } catch (e) {
-            alert('上传失败：' + this.explainFirebaseError(e));
+            if (silent) {
+                console.error('Firebase 后台同步失败', e);
+            } else {
+                alert('上传失败：' + this.explainFirebaseError(e));
+            }
         }
     },
 
@@ -685,6 +807,9 @@ const app = {
 
     backgroundSync() {
         this.updateSyncBadge();
+        if (window.FirebaseStore?.getUser?.()) {
+            this.uploadFirebase({ silent: true });
+        }
     },
 
     disconnectSync() {

@@ -673,6 +673,8 @@ body {
 
 .company-accordion-card {
     cursor: pointer;
+    padding: 12px 14px;
+    gap: 8px;
 }
 
 .company-accordion-card:hover {
@@ -681,8 +683,10 @@ body {
 }
 
 .company-accordion-header {
-    justify-content: space-between;
-    align-items: flex-start;
+    display: grid;
+    grid-template-columns: minmax(260px, 1.3fr) minmax(260px, 0.9fr) auto;
+    align-items: center;
+    gap: 16px;
 }
 
 .company-title-block {
@@ -692,13 +696,96 @@ body {
     min-width: 0;
 }
 
+.company-title-block > div:last-child {
+    min-width: 0;
+}
+
+.drag-handle {
+    width: 28px;
+    height: 28px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--bg);
+    color: var(--text-secondary);
+    cursor: grab;
+    font-size: 14px;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.2s;
+}
+
+.drag-handle:hover {
+    color: var(--blue);
+    border-color: var(--blue-light);
+    background: white;
+}
+
+.drag-handle:active {
+    cursor: grabbing;
+}
+
+.drag-handle.disabled {
+    cursor: not-allowed;
+    opacity: 0.4;
+}
+
+.company-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+    justify-content: flex-end;
+}
+
+.company-order-actions {
+    display: flex;
+    gap: 4px;
+}
+
+.company-order-btn {
+    width: 26px;
+    height: 26px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: white;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 11px;
+    line-height: 1;
+    transition: all 0.2s;
+}
+
+.company-order-btn:hover:not(:disabled) {
+    color: var(--blue);
+    border-color: var(--blue);
+    background: var(--blue-light);
+}
+
+.company-order-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.35;
+}
+
 .company-summary-row {
     display: flex;
     align-items: center;
-    gap: 10px;
+    justify-content: flex-end;
+    gap: 8px;
     flex-wrap: wrap;
     color: var(--text-secondary);
     font-size: 12px;
+    text-align: right;
+}
+
+.company-summary-row > span:first-child,
+.company-summary-row > span:last-child {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 2px 8px;
 }
 
 .company-toggle-btn {
@@ -721,11 +808,13 @@ body {
 
 .company-notes {
     line-height: 1.5;
+    padding-left: 38px;
 }
 
 .expanded-jobs-wrapper {
-    border-left: 3px solid var(--blue-light);
-    padding-left: 12px;
+    border-top: 1px solid var(--border);
+    margin-top: 2px;
+    padding: 14px 0 0 38px;
 }
 
 .expanded-jobs-grid {
@@ -734,8 +823,62 @@ body {
     gap: 12px;
 }
 
+.expanded-jobs-grid .card {
+    min-height: 220px;
+    display: flex;
+    flex-direction: column;
+    padding: 16px;
+}
+
+.expanded-jobs-grid .card-meta {
+    flex-wrap: wrap;
+    gap: 8px 12px;
+}
+
+.expanded-jobs-grid .card-footer {
+    margin-top: auto;
+    gap: 10px;
+}
+
+.expanded-jobs-grid .card-actions {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.expanded-jobs-empty {
+    grid-column: 1 / -1;
+    background: var(--card);
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    color: var(--text-secondary);
+    font-size: 13px;
+    padding: 18px;
+    text-align: center;
+}
+
+.sortable-ghost {
+    opacity: 0.55;
+    border: 1px dashed var(--blue);
+    border-radius: var(--radius);
+    background: var(--blue-light);
+}
+
+.sortable-chosen .company-accordion-card {
+    box-shadow: var(--shadow-lg);
+    border-color: #bfdbfe;
+}
+
 @media (max-width: 900px) {
     .company-grid { grid-template-columns: repeat(2, 1fr); }
+    .company-accordion-header {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+    .company-summary-row,
+    .company-header-actions {
+        justify-content: flex-start;
+        text-align: left;
+    }
     .expanded-jobs-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
@@ -756,10 +899,19 @@ body {
     }
     .company-accordion-header {
         gap: 12px;
-        flex-direction: column;
+    }
+    .company-header-actions {
+        width: 100%;
+        flex-wrap: wrap;
+        justify-content: space-between;
     }
     .company-toggle-btn {
-        width: 100%;
+        flex: 1;
+        justify-content: center;
+    }
+    .company-notes,
+    .expanded-jobs-wrapper {
+        padding-left: 0;
     }
     .expanded-jobs-grid { grid-template-columns: 1fr; }
 }
