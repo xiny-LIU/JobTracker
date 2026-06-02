@@ -43,6 +43,7 @@ const app = {
 
     switchView(view) {
         this.currentView = view;
+        this.expandedCompanyId = null;  // 重置展开状态
         document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
         document.getElementById(`view-${view}`).classList.add('active');
         this.render();
@@ -80,8 +81,8 @@ const app = {
     },
 
     safeBadgeClass(value) {
-        const allowed = new Set(['投递', '笔试', '一面', '二面', '三面', 'HR面', 'Offer', '拒绝']);
-        return allowed.has(value) ? value : '投递';
+        const allowed = new Set(['未投递', '投递', '笔试', '一面', '二面', '三面', 'HR面', 'Offer', '拒绝', '接受']);
+        return allowed.has(value) ? value : '未投递';
     },
 
     safeURL(value) {
@@ -112,7 +113,7 @@ const app = {
         document.getElementById('stat-followup').textContent = followUp;
 
         // Funnel
-        const stages = ['投递', '笔试', '一面', '二面', '三面', 'HR面', 'Offer'];
+        const stages = ['未投递', '投递', '笔试', '一面', '二面', '三面', 'HR面', 'Offer'];
         const counts = stages.map(s => this.data.positions.filter(p => {
             const idx = stages.indexOf(p.status);
             return idx >= stages.indexOf(s) && p.status !== '拒绝';
@@ -324,7 +325,7 @@ const app = {
 
     advance(id) {
         const p = this.data.positions.find(x => x.id === id);
-        const flow = ['投递', '笔试', '一面', '二面', '三面', 'HR面', 'Offer'];
+        const flow = ['未投递', '投递', '笔试', '一面', '二面', '三面', 'HR面', 'Offer'];
         const idx = flow.indexOf(p.status);
         if (idx >= 0 && idx < flow.length - 1) {
             DataStore.updatePosition(id, { status: flow[idx + 1] });
@@ -440,6 +441,23 @@ const app = {
             return `<div class="panel"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><span class="font-medium">${this.escapeHTML(t)}</span><span style="font-size:12px;color:#64748b;">${s.total} 投递</span></div><div style="display:flex;gap:16px;font-size:12px;"><div>面试率 <strong style="color:#3b82f6;">${ivRate}%</strong></div><div>Offer率 <strong style="color:#10b981;">${ofRate}%</strong></div></div></div>`;
         }).join('');
 
+        // 招聘漏斗：按阶段统计
+        const stages = ['未投递', '投递', '笔试', '一面', '二面', '三面', 'HR面', 'Offer', '接受'];
+        const stageCount = {};
+        stages.forEach(s => stageCount[s] = 0);
+        this.data.positions.forEach(p => {
+            const stage = stages.includes(p.status) ? p.status : '未投递';
+            for (let i = stages.indexOf(stage); i < stages.length; i++) {
+                stageCount[stages[i]]++;
+            }
+        });
+        const funnelHtml = stages.slice(0, -1).map((s, i) => {
+            const count = stageCount[s];
+            const nextCount = i+1 < stages.length ? stageCount[stages[i+1]] : 0;
+            const rate = count ? Math.round(nextCount/count*100) : 0;
+            return `<div style="margin-bottom:8px;"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;"><span>${this.escapeHTML(s)}</span><span><strong>${count}</strong> / <strong style="color:#64748b;">通过率 ${rate}%</strong></span></div><div style="height:4px;background:#e2e8f0;border-radius:2px;overflow:hidden;"><div style="width:${count>0?Math.round(nextCount/Math.max(...Object.values(stageCount))*100):0}%;height:100%;background:linear-gradient(to right, #3b82f6, #1e40af);border-radius:2px;"></div></div></div>`;
+        }).join('');
+
         const resumeMap = {};
         this.data.resumes.forEach(r => {
             const ivs = this.data.interviews.filter(i => {
@@ -468,6 +486,7 @@ const app = {
         const moodHtml = Object.entries(moods).map(([m,c]) => `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span style="width:60px;font-size:12px;">${this.escapeHTML(m)}</span><div style="flex:1;height:6px;background:#f1f5f9;border-radius:3px;overflow:hidden;"><div style="width:${totalMood?Math.round(c/totalMood*100):0}%;height:100%;background:${moodColors[m]||'#94a3b8'};border-radius:3px;"></div></div><span style="width:24px;text-align:right;font-size:12px;">${c}</span></div>`).join('');
 
         document.getElementById('analytics-grid').innerHTML = `
+            <div class="panel" style="grid-column:1/-1;"><h3 style="font-size:14px;font-weight:700;margin-bottom:16px;">招聘漏斗</h3>${funnelHtml || '<div style="color:#94a3b8;">数据不足</div>'}</div>
             <div class="panel"><h3 style="font-size:14px;font-weight:700;margin-bottom:16px;">岗位类型表现</h3>${typeHtml || '<div style="color:#94a3b8;">数据不足</div>'}</div>
             <div class="panel"><h3 style="font-size:14px;font-weight:700;margin-bottom:16px;">简历版本效果</h3>${resumeHtml || '<div style="color:#94a3b8;">数据不足</div>'}</div>
             <div class="panel" style="grid-column:1/-1;"><h3 style="font-size:14px;font-weight:700;margin-bottom:16px;">面试知识盲区</h3><div style="display:flex;flex-wrap:wrap;gap:6px;">${wordHtml}</div></div>
@@ -715,7 +734,7 @@ const app = {
                     <div class="form-group"><label>所属公司</label><select id="m-pos-company">${this.data.companies.map(c => `<option value="${this.escapeHTML(c.id)}" ${companyId===c.id?'selected':''}>${this.escapeHTML(c.name)}</option>`).join('')}</select></div>
                 </div>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-                    <div class="form-group"><label>状态</label><select id="m-pos-status">${['投递','笔试','一面','二面','三面','HR面','Offer','拒绝','接受'].map(s => `<option value="${s}" ${p.status===s?'selected':''}>${s}</option>`).join('')}</select></div>
+                    <div class="form-group"><label>状态</label><select id="m-pos-status">${['未投递','投递','笔试','一面','二面','三面','HR面','Offer','拒绝','接受'].map(s => `<option value="${s}" ${p.status===s || (!isEdit && s==='未投递')?'selected':''}>${s}</option>`).join('')}</select></div>
                     <div class="form-group"><label>意愿度</label><div class="star-rating" id="m-pos-stars"></div><input type="hidden" id="m-pos-priority" value="${this.escapeHTML(p.priority || 3)}"></div>
                 </div>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
@@ -823,7 +842,9 @@ const app = {
         const title = document.getElementById('m-pos-title').value.trim();
         const companyId = document.getElementById('m-pos-company').value;
         if (!title || !companyId) return alert('请填写岗位名称并选择公司');
-        const data = { title, companyId, status: document.getElementById('m-pos-status').value, priority: parseInt(document.getElementById('m-pos-priority').value) || 3, location: document.getElementById('m-pos-location').value.trim(), salary: document.getElementById('m-pos-salary').value.trim(), resumeId: document.getElementById('m-pos-resume').value, jd: document.getElementById('m-pos-jd').value.trim(), deadline: document.getElementById('m-pos-deadline').value };
+        // 新增岗位时，默认状态为"未投递"；编辑时保持当前状态
+        const status = id ? document.getElementById('m-pos-status').value : (document.getElementById('m-pos-status').value || '未投递');
+        const data = { title, companyId, status, priority: parseInt(document.getElementById('m-pos-priority').value) || 3, location: document.getElementById('m-pos-location').value.trim(), salary: document.getElementById('m-pos-salary').value.trim(), resumeId: document.getElementById('m-pos-resume').value, jd: document.getElementById('m-pos-jd').value.trim(), deadline: document.getElementById('m-pos-deadline').value };
         if (id) DataStore.updatePosition(id, data);
         else DataStore.addPosition(data);
         this.data = DataStore.get();
