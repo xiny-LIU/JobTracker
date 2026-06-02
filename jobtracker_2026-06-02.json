@@ -1,0 +1,109 @@
+{
+  "companies": [
+    {
+      "industry": "",
+      "name": "歌尔",
+      "createdAt": "2026-05-25T08:55:11.611Z",
+      "id": "c_mpkz0ph766my8",
+      "notes": "",
+      "scale": "大厂",
+      "website": ""
+    },
+    {
+      "industry": "设备",
+      "name": "海天",
+      "createdAt": "2026-05-25T09:56:33.208Z",
+      "id": "c_mpl17m7s7g2pc",
+      "website": "https://www.haitian.com/cn/about-us-2/",
+      "scale": "大厂",
+      "notes": ""
+    }
+  ],
+  "positions": [
+    {
+      "resumeId": "r_mpwa2iluq3x4h",
+      "title": "先锋营（提前批）",
+      "salary": "25w",
+      "updatedAt": "2026-06-02T06:50:24.652Z",
+      "deadline": "",
+      "id": "p_mpw68vj42ehdy",
+      "location": "浙江宁波",
+      "createdAt": "2026-06-02T05:02:57.952Z",
+      "status": "一面",
+      "jd": "",
+      "companyId": "c_mpl17m7s7g2pc",
+      "priority": 5
+    },
+    {
+      "location": "",
+      "createdAt": "2026-06-02T05:09:55.800Z",
+      "status": "投递",
+      "jd": "",
+      "priority": 3,
+      "companyId": "c_mpkz0ph766my8",
+      "title": "夏令营",
+      "resumeId": "",
+      "salary": "",
+      "updatedAt": "2026-06-02T05:09:55.800Z",
+      "deadline": "",
+      "id": "p_mpw6hty0hymik"
+    }
+  ],
+  "resumes": [
+    {
+      "name": "简历v3",
+      "type": "resume",
+      "target": "机械结构研发",
+      "version": "v3",
+      "content": "",
+      "fileName": "刘新雨-机械工程-硕士-天津大学.pdf",
+      "id": "r_mpwa2iluq3x4h",
+      "createdAt": "2026-06-02T06:49:59.731Z"
+    }
+  ],
+  "interviews": [
+    {
+      "interviewer": "张程斐",
+      "selfRating": 4,
+      "notes": "1.问题一中气候问题引起面试官怀疑，面试官怀疑我更适合天津的干燥天气，怕我不适应宁波的气候问题。但是回答珠三角太卷也不合适，怕被怀疑能力不足。",
+      "questions": "1.为什么想去宁波发展，你家的地理位置更靠近珠三角。\n答：地理位置离家近，亲戚在周边。珠三角气候太湿热不习惯；珠三角更偏机器人算法研发，传统制造业更稳定。",
+      "date": "2026-06-02",
+      "round": "一面",
+      "mood": "平稳",
+      "positionId": "p_mpw68vj42ehdy",
+      "createdAt": "2026-06-02T05:08:16.276Z",
+      "result": "通过",
+      "id": "i_mpw6fp5g4bta8"
+    }
+  ],
+  "activities": [
+    {
+      "date": "2026-06-02T05:02:57.952Z",
+      "positionId": "p_mpw68vj42ehdy",
+      "createdAt": "2026-06-02T05:02:57.953Z",
+      "type": "一面",
+      "id": "a_mpw68vj5kzknj",
+      "notes": "新增投递"
+    },
+    {
+      "type": "一面",
+      "id": "a_mpw6fp5giuurw",
+      "notes": "一面完成",
+      "date": "2026-06-02",
+      "positionId": "p_mpw68vj42ehdy",
+      "createdAt": "2026-06-02T05:08:16.276Z"
+    },
+    {
+      "type": "投递",
+      "id": "a_mpw6hty0x6nig",
+      "notes": "新增投递",
+      "date": "2026-06-02T05:09:55.800Z",
+      "positionId": "p_mpw6hty0hymik",
+      "createdAt": "2026-06-02T05:09:55.800Z"
+    }
+  ],
+  "config": {
+    "token": "",
+    "gistId": ""
+  }
+}

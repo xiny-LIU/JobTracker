@@ -100,12 +100,18 @@ Firestore 规则拒绝了读写。
 
 在firebase终端中删除以往文件，上传最新文件夹
 
+```text
 cd ~
 rm -rf ~/jobtracker_firebase
 ls
+```
+点击上传文件夹
+![1780411423517](image/FIREBASE_SETUP/1780411423517.png)
 
+```text
 cd jobtracker_firebase
 firebase deploy --only hosting --project jobtracker-fcdee
+```
 
 ## 7.如果你想允许几个朋友使用
 
