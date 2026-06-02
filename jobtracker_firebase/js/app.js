@@ -3,6 +3,7 @@ const app = {
     currentView: 'dashboard',
     currentDetail: null,
     resumeFilter: 'all',
+    expandedCompanyId: null,
 
     init() {
         this.data = DataStore.get();
@@ -222,47 +223,103 @@ const app = {
         const status = document.getElementById('pos-status').value;
         const priority = document.getElementById('pos-priority').value;
 
-        this.renderCompaniesSection(search);
+        // 过滤公司
+        let companies = this.data.companies;
+        if (search) {
+            companies = companies.filter(c => (c.name + c.industry + c.scale + c.notes).toLowerCase().includes(search));
+        }
 
-        let list = this.data.positions.filter(p => {
-            const c = this.getCompany(p.companyId);
-            const haystack = `${c?.name || ''}${p.title || ''}${p.location || ''}`.toLowerCase();
-            const matchSearch = !search || haystack.includes(search);
-            const matchStatus = !status || p.status === status;
-            const matchPriority = !priority || p.priority === parseInt(priority);
-            return matchSearch && matchStatus && matchPriority;
-        });
-        list.sort((a, b) => b.priority - a.priority || new Date(b.updatedAt) - new Date(a.updatedAt));
+        // 生成公司及其岗位的HTML
+        let html = '';
+        if (companies.length === 0 && this.data.companies.length === 0) {
+            html = '<div class="company-empty" style="grid-column:1/-1;">还没有公司。请先点击右上角"添加公司"，保存后这里会显示公司卡片。</div>';
+        } else if (companies.length === 0) {
+            html = '<div style="grid-column:1/-1;text-align:center;color:#94a3b8;padding:20px;">没有符合条件的公司</div>';
+        } else {
+            html = companies.map(c => {
+                const isExpanded = this.expandedCompanyId === c.id;
+                const jobCount = this.data.positions.filter(p => p.companyId === c.id).length;
+                const companyId = this.inlineArg(c.id);
+                
+                // 过滤该公司的岗位
+                let companyJobs = this.data.positions.filter(p => p.companyId === c.id);
+                if (search) {
+                    companyJobs = companyJobs.filter(p => {
+                        const haystack = `${p.title || ''}${p.location || ''}`.toLowerCase();
+                        return haystack.includes(search);
+                    });
+                }
+                if (status) {
+                    companyJobs = companyJobs.filter(p => p.status === status);
+                }
+                if (priority) {
+                    companyJobs = companyJobs.filter(p => p.priority === parseInt(priority));
+                }
+                companyJobs.sort((a, b) => b.priority - a.priority || new Date(b.updatedAt) - new Date(a.updatedAt));
+                
+                // 渲染岗位卡片
+                const jobsHtml = companyJobs.map(p => {
+                    const r = this.data.resumes.find(x => x.id === p.resumeId);
+                    const ivs = this.data.interviews.filter(i => i.positionId === p.id).sort((a,b) => new Date(b.date) - new Date(a.date));
+                    const last = ivs[0];
+                    const stars = Array(5).fill(0).map((_,i) => `<span class="card-star ${i < p.priority ? 'active' : ''}">★</span>`).join('');
+                    const positionId = this.inlineArg(p.id);
+                    const badgeClass = this.safeBadgeClass(p.status);
+                    return `<div class="card" onclick="app.openDetail('${positionId}')">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <div class="card-logo">${this.escapeHTML((c?.name || '公')[0])}</div>
+                                <div><div class="card-name">${this.escapeHTML(c?.name || '未知')}</div><div class="card-role">${this.escapeHTML(p.title)}</div></div>
+                            </div>
+                            <span class="activity-badge badge-${badgeClass}">${this.escapeHTML(p.status)}</span>
+                        </div>
+                        <div class="card-stars">${stars}</div>
+                        <div class="card-meta"><span>📍 ${this.escapeHTML(p.location || '未知')}</span><span>💰 ${this.escapeHTML(p.salary || '面议')}</span></div>
+                        ${r ? `<div class="card-resume">📄 ${this.escapeHTML(r.name)}</div>` : ''}
+                        <div class="card-footer">
+                            <span class="card-footer-text">${last ? `最近: ${this.escapeHTML(last.round)} ${this.escapeHTML(last.date)}` : '暂无面试'}</span>
+                            <div class="card-actions">
+                                <button class="card-btn" onclick="event.stopPropagation();app.openPositionModal('${positionId}')">编辑</button>
+                                <button class="card-btn" onclick="event.stopPropagation();app.advance('${positionId}')">推进 ➜</button>
+                                <button class="card-btn" onclick="event.stopPropagation();app.openInterviewModal('${positionId}')">记面试</button>
+                            </div>
+                        </div>
+                    </div>`;
+                }).join('') || '<div style="padding:20px;text-align:center;color:#94a3b8;font-size:13px;">暂无岗位，点击添加岗位创建第一个岗位</div>';
+                
+                return `<div class="company-card" style="grid-column:1/-1;cursor:pointer;" onclick="app.toggleCompanyJobs('${companyId}')">
+                    <div class="company-card-header">
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <span style="font-size:14px;color:#64748b;transition:transform 0.2s;">${isExpanded ? '▼' : '▶'}</span>
+                            <div class="card-logo">${this.escapeHTML((c.name || '公')[0])}</div>
+                            <div>
+                                <div class="company-card-name">${this.escapeHTML(c.name || '未命名公司')}</div>
+                                <div class="company-card-meta">${this.escapeHTML(c.industry || '未知行业')} · ${this.escapeHTML(c.scale || '未知规模')} · ${jobCount} 个岗位</div>
+                            </div>
+                        </div>
+                    </div>
+                    ${c.notes ? `<div class="company-card-meta">${this.escapeHTML(c.notes)}</div>` : ''}
+                    <div class="company-card-actions">
+                        <button class="card-btn" onclick="event.stopPropagation();app.openPositionModal(null, '${companyId}')">添加岗位</button>
+                        <button class="card-btn" onclick="event.stopPropagation();app.openModal('company', '${companyId}')">编辑公司</button>
+                    </div>
+                    ${isExpanded ? `<div style="margin-top:16px;padding-top:16px;border-top:1px solid #e2e8f0;">
+                        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;">${jobsHtml}</div>
+                    </div>` : ''}
+                </div>`;
+            }).join('');
+        }
+        
+        document.getElementById('positions-grid').innerHTML = html;
+    },
 
-        document.getElementById('positions-grid').innerHTML = list.map(p => {
-            const c = this.getCompany(p.companyId);
-            const r = this.data.resumes.find(x => x.id === p.resumeId);
-            const ivs = this.data.interviews.filter(i => i.positionId === p.id).sort((a,b) => new Date(b.date) - new Date(a.date));
-            const last = ivs[0];
-            const stars = Array(5).fill(0).map((_,i) => `<span class="card-star ${i < p.priority ? 'active' : ''}">★</span>`).join('');
-            const positionId = this.inlineArg(p.id);
-            const badgeClass = this.safeBadgeClass(p.status);
-            return `<div class="card" onclick="app.openDetail('${positionId}')">
-                <div class="card-header">
-                    <div class="card-title">
-                        <div class="card-logo">${this.escapeHTML((c?.name || '公')[0])}</div>
-                        <div><div class="card-name">${this.escapeHTML(c?.name || '未知')}</div><div class="card-role">${this.escapeHTML(p.title)}</div></div>
-                    </div>
-                    <span class="activity-badge badge-${badgeClass}">${this.escapeHTML(p.status)}</span>
-                </div>
-                <div class="card-stars">${stars}</div>
-                <div class="card-meta"><span>📍 ${this.escapeHTML(p.location || '未知')}</span><span>💰 ${this.escapeHTML(p.salary || '面议')}</span></div>
-                ${r ? `<div class="card-resume">📄 ${this.escapeHTML(r.name)}</div>` : ''}
-                <div class="card-footer">
-                    <span class="card-footer-text">${last ? `最近: ${this.escapeHTML(last.round)} ${this.escapeHTML(last.date)}` : '暂无面试'}</span>
-                    <div class="card-actions">
-                        <button class="card-btn" onclick="event.stopPropagation();app.openPositionModal('${positionId}')">编辑</button>
-                        <button class="card-btn" onclick="event.stopPropagation();app.advance('${positionId}')">推进 ➜</button>
-                        <button class="card-btn" onclick="event.stopPropagation();app.openInterviewModal('${positionId}')">记面试</button>
-                    </div>
-                </div>
-            </div>`;
-        }).join('') || '<div style="grid-column:1/-1;text-align:center;color:#94a3b8;padding:40px;">暂无岗位，点击右上角添加</div>';
+    toggleCompanyJobs(companyId) {
+        if (this.expandedCompanyId === companyId) {
+            this.expandedCompanyId = null;
+        } else {
+            this.expandedCompanyId = companyId;
+        }
+        this.renderPositions();
     },
 
     advance(id) {
