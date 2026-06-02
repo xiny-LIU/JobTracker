@@ -3,7 +3,8 @@ const app = {
     currentView: 'dashboard',
     currentDetail: null,
     resumeFilter: 'all',
-    expandedCompanyId: null,
+    expandedCompanyIds: new Set(),
+    renderedCompanyIds: [],
 
     init() {
         this.data = DataStore.get();
@@ -43,7 +44,7 @@ const app = {
 
     switchView(view) {
         this.currentView = view;
-        this.expandedCompanyId = null;  // 重置展开状态
+        this.expandedCompanyIds.clear();  // 重置展开状态
         document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
         document.getElementById(`view-${view}`).classList.add('active');
         this.render();
@@ -78,6 +79,58 @@ const app = {
 
     inlineArg(value) {
         return this.escapeHTML(this.escapeJSString(value));
+    },
+
+    getSortedCompanies(companies = this.data.companies) {
+        return [...companies]
+            .map((company, index) => ({ company, index }))
+            .sort((a, b) => {
+                const orderA = Number.isFinite(Number(a.company.order)) ? Number(a.company.order) : a.index * 10;
+                const orderB = Number.isFinite(Number(b.company.order)) ? Number(b.company.order) : b.index * 10;
+                return orderA - orderB || a.index - b.index;
+            })
+            .map(item => item.company);
+    },
+
+    getCompanyJobs(companyId) {
+        return this.data.positions.filter(p => p.companyId === companyId);
+    },
+
+    getCompanyHighestStatus(company) {
+        const statusOrder = ['未投递', '投递', '笔试', '一面', '二面', '三面', 'HR面', 'Offer', '接受'];
+        const jobs = this.getCompanyJobs(company.id);
+        if (!jobs.length) return '未投递';
+        const activeJobs = jobs.filter(p => p.status !== '拒绝');
+        if (!activeJobs.length) return '拒绝';
+        return activeJobs.reduce((highest, job) => {
+            const currentIndex = statusOrder.indexOf(job.status);
+            const highestIndex = statusOrder.indexOf(highest);
+            return currentIndex > highestIndex ? job.status : highest;
+        }, '未投递');
+    },
+
+    getCompanyLastUpdated(company) {
+        const jobs = this.getCompanyJobs(company.id);
+        const jobIds = new Set(jobs.map(p => p.id));
+        const candidates = [];
+
+        jobs.forEach(job => {
+            if (job.updatedAt) candidates.push(job.updatedAt);
+        });
+        this.data.interviews.forEach(interview => {
+            if (!jobIds.has(interview.positionId)) return;
+            if (interview.date) candidates.push(interview.date);
+            if (interview.createdAt) candidates.push(interview.createdAt);
+        });
+        if (company.updatedAt) candidates.push(company.updatedAt);
+
+        const dates = candidates
+            .map(value => ({ value, time: new Date(value).getTime() }))
+            .filter(item => Number.isFinite(item.time))
+            .sort((a, b) => b.time - a.time);
+
+        if (!dates.length) return '暂无更新';
+        return new Date(dates[0].time).toLocaleDateString('zh-CN');
     },
 
     safeBadgeClass(value) {
@@ -180,7 +233,7 @@ const app = {
         const container = document.getElementById('company-section');
         if (!container) return;
 
-        let companies = this.data.companies;
+        let companies = this.getSortedCompanies();
         if (search) {
             companies = companies.filter(c => (c.name + c.industry + c.scale + c.notes).toLowerCase().includes(search));
         }
@@ -224,11 +277,28 @@ const app = {
         const status = document.getElementById('pos-status').value;
         const priority = document.getElementById('pos-priority').value;
 
-        // 过滤公司
-        let companies = this.data.companies;
-        if (search) {
-            companies = companies.filter(c => (c.name + c.industry + c.scale + c.notes).toLowerCase().includes(search));
-        }
+        const filterJobs = (jobs, companyMatched = false) => {
+            let filtered = [...jobs];
+            if (search && !companyMatched) {
+                filtered = filtered.filter(p => {
+                    const haystack = `${p.title || ''}${p.location || ''}${p.salary || ''}${p.jd || ''}`.toLowerCase();
+                    return haystack.includes(search);
+                });
+            }
+            if (status) filtered = filtered.filter(p => p.status === status);
+            if (priority) filtered = filtered.filter(p => p.priority === parseInt(priority));
+            return filtered.sort((a, b) => (b.priority || 0) - (a.priority || 0) || new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0));
+        };
+
+        const companies = this.getSortedCompanies().filter(company => {
+            const companyHaystack = `${company.name || ''}${company.industry || ''}${company.scale || ''}${company.city || ''}${company.notes || ''}`.toLowerCase();
+            const companyMatched = search && companyHaystack.includes(search);
+            const jobs = this.getCompanyJobs(company.id);
+            const filteredJobs = filterJobs(jobs, companyMatched);
+            if (!search && !status && !priority) return true;
+            return companyMatched || filteredJobs.length > 0;
+        });
+        this.renderedCompanyIds = companies.map(c => c.id);
 
         // 生成公司及其岗位的HTML
         let html = '';
@@ -238,25 +308,16 @@ const app = {
             html = '<div style="grid-column:1/-1;text-align:center;color:#94a3b8;padding:20px;">没有符合条件的公司</div>';
         } else {
             html = companies.map(c => {
-                const isExpanded = this.expandedCompanyId === c.id;
-                const jobCount = this.data.positions.filter(p => p.companyId === c.id).length;
+                const isExpanded = this.expandedCompanyIds.has(c.id);
+                const allCompanyJobs = this.getCompanyJobs(c.id);
+                const jobCount = allCompanyJobs.length;
                 const companyId = this.inlineArg(c.id);
-                
-                // 过滤该公司的岗位
-                let companyJobs = this.data.positions.filter(p => p.companyId === c.id);
-                if (search) {
-                    companyJobs = companyJobs.filter(p => {
-                        const haystack = `${p.title || ''}${p.location || ''}`.toLowerCase();
-                        return haystack.includes(search);
-                    });
-                }
-                if (status) {
-                    companyJobs = companyJobs.filter(p => p.status === status);
-                }
-                if (priority) {
-                    companyJobs = companyJobs.filter(p => p.priority === parseInt(priority));
-                }
-                companyJobs.sort((a, b) => b.priority - a.priority || new Date(b.updatedAt) - new Date(a.updatedAt));
+                const companyHaystack = `${c.name || ''}${c.industry || ''}${c.scale || ''}${c.city || ''}${c.notes || ''}`.toLowerCase();
+                const companyMatched = search && companyHaystack.includes(search);
+                const companyJobs = filterJobs(allCompanyJobs, companyMatched);
+                const highestStatus = this.getCompanyHighestStatus(c);
+                const badgeClass = this.safeBadgeClass(highestStatus);
+                const lastUpdated = this.getCompanyLastUpdated(c);
                 
                 // 渲染岗位卡片
                 const jobsHtml = companyJobs.map(p => {
@@ -265,14 +326,14 @@ const app = {
                     const last = ivs[0];
                     const stars = Array(5).fill(0).map((_,i) => `<span class="card-star ${i < p.priority ? 'active' : ''}">★</span>`).join('');
                     const positionId = this.inlineArg(p.id);
-                    const badgeClass = this.safeBadgeClass(p.status);
-                    return `<div class="card" onclick="app.openDetail('${positionId}')">
+                    const positionBadgeClass = this.safeBadgeClass(p.status);
+                    return `<div class="card" onclick="event.stopPropagation();app.openDetail('${positionId}')">
                         <div class="card-header">
                             <div class="card-title">
                                 <div class="card-logo">${this.escapeHTML((c?.name || '公')[0])}</div>
                                 <div><div class="card-name">${this.escapeHTML(c?.name || '未知')}</div><div class="card-role">${this.escapeHTML(p.title)}</div></div>
                             </div>
-                            <span class="activity-badge badge-${badgeClass}">${this.escapeHTML(p.status)}</span>
+                            <span class="activity-badge badge-${positionBadgeClass}">${this.escapeHTML(p.status)}</span>
                         </div>
                         <div class="card-stars">${stars}</div>
                         <div class="card-meta"><span>📍 ${this.escapeHTML(p.location || '未知')}</span><span>💰 ${this.escapeHTML(p.salary || '面议')}</span></div>
@@ -288,24 +349,31 @@ const app = {
                     </div>`;
                 }).join('') || '<div style="padding:20px;text-align:center;color:#94a3b8;font-size:13px;">暂无岗位，点击添加岗位创建第一个岗位</div>';
                 
-                return `<div class="company-card" style="grid-column:1/-1;cursor:pointer;" onclick="app.toggleCompanyJobs('${companyId}')">
-                    <div class="company-card-header">
-                        <div style="display:flex;align-items:center;gap:8px;">
-                            <span style="font-size:14px;color:#64748b;transition:transform 0.2s;">${isExpanded ? '▼' : '▶'}</span>
+                return `<div class="company-accordion-item">
+                <div class="company-card company-accordion-card ${isExpanded ? 'expanded' : ''}" onclick="app.toggleCompanyJobs('${companyId}', event)">
+                    <div class="company-card-header company-accordion-header">
+                        <div class="company-title-block">
                             <div class="card-logo">${this.escapeHTML((c.name || '公')[0])}</div>
                             <div>
                                 <div class="company-card-name">${this.escapeHTML(c.name || '未命名公司')}</div>
-                                <div class="company-card-meta">${this.escapeHTML(c.industry || '未知行业')} · ${this.escapeHTML(c.scale || '未知规模')} · ${jobCount} 个岗位</div>
+                                <div class="company-card-meta">${this.escapeHTML(c.industry || '未知行业')} · ${this.escapeHTML(c.scale || '未知规模')} · ${this.escapeHTML(c.city || '未知城市')}</div>
                             </div>
                         </div>
+                        <button class="company-toggle-btn" onclick="event.stopPropagation();app.toggleCompanyJobs('${companyId}', event)">${isExpanded ? '收起岗位' : '展开岗位'}</button>
                     </div>
-                    ${c.notes ? `<div class="company-card-meta">${this.escapeHTML(c.notes)}</div>` : ''}
-                    <div class="company-card-actions">
+                    <div class="company-summary-row">
+                        <span>${jobCount} 个岗位</span>
+                        <span class="activity-badge badge-${badgeClass}">${this.escapeHTML(highestStatus)}</span>
+                        <span>最近更新：${this.escapeHTML(lastUpdated)}</span>
+                    </div>
+                    ${c.notes ? `<div class="company-card-meta company-notes">${this.escapeHTML(c.notes)}</div>` : ''}
+                    <div class="company-card-actions" onclick="event.stopPropagation()">
                         <button class="card-btn" onclick="event.stopPropagation();app.openPositionModal(null, '${companyId}')">添加岗位</button>
                         <button class="card-btn" onclick="event.stopPropagation();app.openModal('company', '${companyId}')">编辑公司</button>
                     </div>
-                    ${isExpanded ? `<div style="margin-top:16px;padding-top:16px;border-top:1px solid #e2e8f0;">
-                        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;">${jobsHtml}</div>
+                </div>
+                    ${isExpanded ? `<div class="expanded-jobs-wrapper" onclick="event.stopPropagation()">
+                        <div class="expanded-jobs-grid">${jobsHtml}</div>
                     </div>` : ''}
                 </div>`;
             }).join('');
@@ -314,12 +382,23 @@ const app = {
         document.getElementById('positions-grid').innerHTML = html;
     },
 
-    toggleCompanyJobs(companyId) {
-        if (this.expandedCompanyId === companyId) {
-            this.expandedCompanyId = null;
+    toggleCompanyJobs(companyId, event) {
+        if (event) event.stopPropagation();
+        if (this.expandedCompanyIds.has(companyId)) {
+            this.expandedCompanyIds.delete(companyId);
         } else {
-            this.expandedCompanyId = companyId;
+            this.expandedCompanyIds.add(companyId);
         }
+        this.renderPositions();
+    },
+
+    expandAllCompanies() {
+        this.expandedCompanyIds = new Set(this.renderedCompanyIds);
+        this.renderPositions();
+    },
+
+    collapseAllCompanies() {
+        this.expandedCompanyIds.clear();
         this.renderPositions();
     },
 
@@ -720,6 +799,7 @@ const app = {
                     <div class="form-group"><label>行业</label><input id="m-c-industry" value="${this.escapeHTML(c.industry || '')}"></div>
                     <div class="form-group"><label>规模</label><select id="m-c-scale"><option value="">未知</option>${['初创','成长型','大厂','外企','国企'].map(s => `<option value="${s}" ${c.scale===s?'selected':''}>${s}</option>`).join('')}</select></div>
                 </div>
+                <div class="form-group"><label>城市</label><input id="m-c-city" value="${this.escapeHTML(c.city || '')}"></div>
                 <div class="form-group"><label>官网</label><input id="m-c-website" value="${this.escapeHTML(c.website || '')}"></div>
                 <div class="form-group"><label>备注</label><textarea id="m-c-notes" rows="3">${this.escapeHTML(c.notes || '')}</textarea></div>`;
             footer.innerHTML = `${id?'<button class="btn-danger" data-action="deleteCompany">删除</button>':''}<div style="margin-left:auto;display:flex;gap:8px;"><button class="btn-secondary" data-action="closeModal">取消</button><button class="btn-primary" data-action="saveCompany">保存</button></div>`;
@@ -813,7 +893,7 @@ const app = {
         const id = document.getElementById('m-company-id').value;
         const name = document.getElementById('m-c-name').value.trim();
         if (!name) return alert('请输入公司名称');
-        const data = { name, industry: document.getElementById('m-c-industry').value.trim(), scale: document.getElementById('m-c-scale').value, website: document.getElementById('m-c-website').value.trim(), notes: document.getElementById('m-c-notes').value.trim() };
+        const data = { name, industry: document.getElementById('m-c-industry').value.trim(), scale: document.getElementById('m-c-scale').value, city: document.getElementById('m-c-city').value.trim(), website: document.getElementById('m-c-website').value.trim(), notes: document.getElementById('m-c-notes').value.trim() };
         if (id) DataStore.updateCompany(id, data);
         else DataStore.addCompany(data);
         this.data = DataStore.get();

@@ -193,6 +193,7 @@ body {
 .activity-note { color: var(--text-secondary); font-size: 12px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* Status badges */
+.badge-未投递 { background: #f1f5f9; color: #475569; }
 .badge-投递 { background: #f1f5f9; color: #475569; }
 .badge-笔试 { background: var(--amber-light); color: #b45309; }
 .badge-一面 { background: var(--blue-light); color: #1d4ed8; }
@@ -201,6 +202,7 @@ body {
 .badge-HR面 { background: var(--green-light); color: #047857; }
 .badge-Offer { background: #ecfdf5; color: var(--green); font-weight: 700; }
 .badge-拒绝 { background: var(--red-light); color: #b91c1c; }
+.badge-接受 { background: #ccfbf1; color: #0f766e; font-weight: 700; }
 
 /* Section Header */
 .section-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; }
@@ -225,7 +227,7 @@ body {
 
 
 /* Filter Bar */
-.filter-bar { display: flex; gap: 10px; margin-bottom: 20px; }
+.filter-bar { display: flex; gap: 10px; margin-bottom: 20px; align-items: center; flex-wrap: wrap; }
 .filter-bar input, .filter-bar select {
     padding: 8px 12px;
     border: 1px solid var(--border);
@@ -236,6 +238,11 @@ body {
 }
 .filter-bar input { flex: 1; }
 .filter-bar input:focus, .filter-bar select:focus { border-color: var(--blue); }
+.filter-actions {
+    display: flex;
+    gap: 8px;
+    margin-left: auto;
+}
 
 /* Cards Grid */
 .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
@@ -652,11 +659,107 @@ body {
     text-align: center;
 }
 
+.company-accordion {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.company-accordion-item {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.company-accordion-card {
+    cursor: pointer;
+}
+
+.company-accordion-card:hover {
+    box-shadow: var(--shadow-lg);
+    border-color: #cbd5e1;
+}
+
+.company-accordion-header {
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.company-title-block {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
+.company-summary-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    color: var(--text-secondary);
+    font-size: 12px;
+}
+
+.company-toggle-btn {
+    border: none;
+    border-radius: 999px;
+    background: var(--blue-light);
+    color: var(--blue);
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 6px 12px;
+    white-space: nowrap;
+    transition: all 0.2s;
+}
+
+.company-toggle-btn:hover {
+    background: var(--blue);
+    color: white;
+}
+
+.company-notes {
+    line-height: 1.5;
+}
+
+.expanded-jobs-wrapper {
+    border-left: 3px solid var(--blue-light);
+    padding-left: 12px;
+}
+
+.expanded-jobs-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+}
+
 @media (max-width: 900px) {
     .company-grid { grid-template-columns: repeat(2, 1fr); }
+    .expanded-jobs-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 640px) {
     .section-actions { flex-direction: column; align-items: stretch; width: 100%; }
     .company-grid { grid-template-columns: 1fr; }
+    .filter-bar input,
+    .filter-bar select,
+    .filter-actions {
+        width: 100%;
+    }
+    .filter-actions {
+        margin-left: 0;
+    }
+    .filter-actions .btn-secondary {
+        flex: 1;
+        justify-content: center;
+    }
+    .company-accordion-header {
+        gap: 12px;
+        flex-direction: column;
+    }
+    .company-toggle-btn {
+        width: 100%;
+    }
+    .expanded-jobs-grid { grid-template-columns: 1fr; }
 }

@@ -32,10 +32,17 @@ const DataStore = {
     normalize(data) {
         const base = this.getDefault();
         const safe = data && typeof data === 'object' ? data : {};
+        const companies = Array.isArray(safe.companies)
+            ? safe.companies.map((company, index) => ({
+                ...company,
+                order: Number.isFinite(Number(company.order)) ? Number(company.order) : index * 10,
+                city: company.city || ''
+            }))
+            : [];
         return {
             ...base,
             ...safe,
-            companies: Array.isArray(safe.companies) ? safe.companies : [],
+            companies,
             positions: Array.isArray(safe.positions) ? safe.positions : [],
             resumes: Array.isArray(safe.resumes) ? safe.resumes : [],
             interviews: Array.isArray(safe.interviews) ? safe.interviews : [],
@@ -61,7 +68,7 @@ const DataStore = {
         const data = this.get();
         const idx = data.companies.findIndex(c => c.id === id);
         if (idx >= 0) {
-            data.companies[idx] = { ...data.companies[idx], ...updates };
+            data.companies[idx] = { ...data.companies[idx], ...updates, updatedAt: new Date().toISOString() };
             this.set(data);
         }
     },

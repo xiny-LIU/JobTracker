@@ -116,10 +116,14 @@
                     <option value="2">⭐⭐</option>
                     <option value="1">⭐</option>
                 </select>
+                <div class="filter-actions">
+                    <button class="btn-secondary" onclick="app.expandAllCompanies()">全部展开</button>
+                    <button class="btn-secondary" onclick="app.collapseAllCompanies()">全部收起</button>
+                </div>
             </div>
 
             <div class="company-section" id="company-section"></div>
-            <div class="grid-3" id="positions-grid"></div>
+            <div class="company-accordion" id="positions-grid"></div>
         </section>
 
         <!-- 资料库 -->
