@@ -135,17 +135,23 @@ const app = {
         return new Date(dates[0].time).toLocaleDateString('zh-CN');
     },
 
-    getCompanyMetaText(company) {
-        const parts = [
-            company.industry || '未知行业',
-            company.scale || '未知规模'
-        ];
-        if (company.city) parts.push(company.city);
-        return parts.join(' · ');
-    },
-
     formatJobCount(count) {
         return `${count} 个岗位`;
+    },
+
+    getCompanyMetaItems(company) {
+        const items = [
+            { icon: '🏭', text: company.industry || '未知行业' },
+            { icon: '👥', text: company.scale || '未知规模' }
+        ];
+        if (company.city) items.push({ icon: '📍', text: company.city });
+        return items;
+    },
+
+    renderCompanyMeta(company) {
+        return this.getCompanyMetaItems(company)
+            .map(item => `<span class="company-meta-item"><span>${item.icon}</span>${this.escapeHTML(item.text)}</span>`)
+            .join('');
     },
 
     isCompanyOrderingDisabled() {
@@ -353,7 +359,7 @@ const app = {
                 const badgeClass = this.safeBadgeClass(highestStatus);
                 const lastUpdated = this.getCompanyLastUpdated(c);
                 const lastUpdatedText = lastUpdated === '暂无更新' ? lastUpdated : `最近更新：${lastUpdated}`;
-                const companyMeta = this.getCompanyMetaText(c);
+                const companyMetaHtml = this.renderCompanyMeta(c);
                 const jobCountText = this.formatJobCount(jobCount);
                 const dragDisabledClass = isOrderingDisabled ? ' disabled' : '';
                 const upDisabled = isOrderingDisabled || isFirst ? 'disabled' : '';
@@ -389,15 +395,15 @@ const app = {
                     </div>`;
                 }).join('') || '<div class="expanded-jobs-empty">暂无岗位，点击添加岗位创建第一个岗位</div>';
                 
-                return `<div class="company-accordion-item" data-company-id="${companyDomId}">
+                return `<div class="company-accordion-item ${isExpanded ? 'is-expanded' : ''}" data-company-id="${companyDomId}">
                 <div class="company-card company-accordion-card ${isExpanded ? 'expanded' : ''}" onclick="app.toggleCompanyJobs('${companyId}', event)">
                     <div class="company-card-header company-accordion-header">
                         <div class="company-title-block">
-                            <button class="drag-handle${dragDisabledClass}" title="${isOrderingDisabled ? '筛选状态下不可排序' : '拖拽排序'}" onclick="event.stopPropagation()">☰</button>
+                            <button class="drag-handle${dragDisabledClass}" title="${isOrderingDisabled ? '筛选状态下不可排序' : '拖拽排序'}" onclick="event.stopPropagation()" aria-label="拖拽排序"><span></span></button>
                             <div class="card-logo">${this.escapeHTML((c.name || '公')[0])}</div>
                             <div>
                                 <div class="company-card-name">${this.escapeHTML(c.name || '未命名公司')}</div>
-                                <div class="company-card-meta">${this.escapeHTML(companyMeta)}</div>
+                                <div class="company-card-meta company-card-meta-icons">${companyMetaHtml}</div>
                             </div>
                         </div>
                         <div class="company-summary-row">
@@ -614,13 +620,65 @@ const app = {
         this.renderResumes();
     },
 
+    getPositionType(title = '') {
+        return title.includes('后端') || title.includes('后台') ? '后端' :
+            title.includes('前端') ? '前端' :
+            title.includes('产品') ? '产品' :
+            title.includes('算法') ? '算法' : '其他';
+    },
+
+    getAnalyticsStages() {
+        return ['未投递', '投递', '笔试', '一面', '二面', '三面', 'HR面', 'Offer', '接受'];
+    },
+
+    buildKnowledgeBlindSpots() {
+        const sourceFields = [
+            'blindSpot', 'blindSpots', 'knowledgeGap', 'knowledgeGaps',
+            'weakness', 'weaknesses', 'tags'
+        ];
+        const cuePattern = /(盲区|短板|薄弱|不会|不熟|没答好|需要补|需要复习|待补|卡住|复盘|知识点)/;
+        const records = [];
+
+        const pushRecord = (interview, rawText) => {
+            const text = String(rawText || '').trim();
+            if (!text) return;
+            const position = this.data.positions.find(p => p.id === interview.positionId);
+            if (!position) return;
+            const company = this.getCompany(position.companyId);
+            if (!company) return;
+            records.push({
+                text,
+                summary: text.length > 80 ? `${text.slice(0, 80)}...` : text,
+                companyName: company.name || '未知公司',
+                positionTitle: position.title || '未知岗位',
+                round: interview.round || '未知轮次',
+                date: interview.date || interview.createdAt || '未知日期'
+            });
+        };
+
+        this.data.interviews.forEach(interview => {
+            sourceFields.forEach(field => {
+                const value = interview[field];
+                if (Array.isArray(value)) value.forEach(item => pushRecord(interview, item));
+                else if (value) String(value).split(/\n|,|，|;|；/).forEach(item => pushRecord(interview, item));
+            });
+
+            [interview.notes, interview.questions].forEach(value => {
+                String(value || '')
+                    .split(/\n/)
+                    .map(line => line.trim())
+                    .filter(line => cuePattern.test(line))
+                    .forEach(line => pushRecord(interview, line));
+            });
+        });
+
+        return records;
+    },
+
     renderAnalytics() {
         const typeMap = {};
         this.data.positions.forEach(p => {
-            let t = p.title.includes('后端') || p.title.includes('后台') ? '后端' :
-                    p.title.includes('前端') ? '前端' :
-                    p.title.includes('产品') ? '产品' :
-                    p.title.includes('算法') ? '算法' : '其他';
+            let t = this.getPositionType(p.title || '');
             if (!typeMap[t]) typeMap[t] = { total: 0, iv: 0, offer: 0 };
             typeMap[t].total++;
             if (['一面','二面','三面','HR面','Offer','接受'].includes(p.status)) typeMap[t].iv++;
@@ -633,21 +691,38 @@ const app = {
             return `<div class="panel"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><span class="font-medium">${this.escapeHTML(t)}</span><span style="font-size:12px;color:#64748b;">${s.total} 投递</span></div><div style="display:flex;gap:16px;font-size:12px;"><div>面试率 <strong style="color:#3b82f6;">${ivRate}%</strong></div><div>Offer率 <strong style="color:#10b981;">${ofRate}%</strong></div></div></div>`;
         }).join('');
 
-        // 招聘漏斗：按阶段统计
-        const stages = ['未投递', '投递', '笔试', '一面', '二面', '三面', 'HR面', 'Offer', '接受'];
+        // 当前状态分布和招聘漏斗转化率使用不同口径，避免混用累计数量。
+        const stages = this.getAnalyticsStages();
         const stageCount = {};
         stages.forEach(s => stageCount[s] = 0);
         this.data.positions.forEach(p => {
+            if (p.status === '拒绝') return;
             const stage = stages.includes(p.status) ? p.status : '未投递';
-            for (let i = stages.indexOf(stage); i < stages.length; i++) {
-                stageCount[stages[i]]++;
-            }
+            stageCount[stage]++;
         });
+
+        const maxStageCount = Math.max(...Object.values(stageCount), 1);
+        const distributionHtml = stages.map(stage => {
+            const count = stageCount[stage];
+            return `<div class="analytics-stage-row">
+                <div class="analytics-stage-label">${this.escapeHTML(stage)}</div>
+                <div class="analytics-stage-bar"><div style="width:${Math.round(count / maxStageCount * 100)}%;"></div></div>
+                <div class="analytics-stage-count">${count}</div>
+            </div>`;
+        }).join('');
+
         const funnelHtml = stages.slice(0, -1).map((s, i) => {
             const count = stageCount[s];
-            const nextCount = i+1 < stages.length ? stageCount[stages[i+1]] : 0;
-            const rate = count ? Math.round(nextCount/count*100) : 0;
-            return `<div style="margin-bottom:8px;"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;"><span>${this.escapeHTML(s)}</span><span><strong>${count}</strong> / <strong style="color:#64748b;">通过率 ${rate}%</strong></span></div><div style="height:4px;background:#e2e8f0;border-radius:2px;overflow:hidden;"><div style="width:${count>0?Math.round(nextCount/Math.max(...Object.values(stageCount))*100):0}%;height:100%;background:linear-gradient(to right, #3b82f6, #1e40af);border-radius:2px;"></div></div></div>`;
+            const nextStage = stages[i + 1];
+            const nextCount = stageCount[nextStage];
+            const rate = count ? Math.min(100, Math.round(nextCount / count * 100)) : null;
+            return `<div class="analytics-funnel-row">
+                <div class="analytics-funnel-head">
+                    <span>${this.escapeHTML(s)} → ${this.escapeHTML(nextStage)}</span>
+                    <span><strong>${count}</strong> 个当前阶段 / <strong style="color:#64748b;">通过率 ${rate === null ? '-' : `${rate}%`}</strong></span>
+                </div>
+                <div class="analytics-funnel-bar"><div style="width:${rate === null ? 0 : rate}%;"></div></div>
+            </div>`;
         }).join('');
 
         const resumeMap = {};
@@ -661,15 +736,13 @@ const app = {
         });
         const resumeHtml = Object.entries(resumeMap).map(([n, s]) => `<div class="panel"><div style="display:flex;justify-content:space-between;margin-bottom:8px;"><span class="font-medium">${this.escapeHTML(n)}</span><span style="font-size:12px;color:#64748b;">${s.total} 场面试</span></div><div style="font-size:12px;">通过率 <strong style="color:${s.rate>=60?'#10b981':s.rate>=40?'#3b82f6':'#f59e0b'};">${s.rate}%</strong></div></div>`).join('');
 
-        const words = {};
-        this.data.interviews.forEach(i => {
-            if (i.questions) {
-                ['Redis','MySQL','Kafka','Docker','K8s','算法','网络','OS','Go','Java','微服务','分布式','设计模式','并发'].forEach(k => {
-                    if (i.questions.includes(k)) words[k] = (words[k]||0)+1;
-                });
-            }
-        });
-        const wordHtml = Object.entries(words).sort((a,b) => b[1]-a[1]).map(([w,c]) => `<span class="tag" style="background:${c>=3?'#fee2e2':c>=2?'#fef3c7':'#f1f5f9'};color:${c>=3?'#991b1b':c>=2?'#92400e':'#475569'};">${this.escapeHTML(w)} (${c})</span>`).join('') || '<span style="color:#94a3b8;">多记录面试问题即可生成</span>';
+        const blindSpots = this.buildKnowledgeBlindSpots();
+        const blindSpotHtml = blindSpots.length
+            ? blindSpots.map(item => `<div class="blind-spot-card">
+                <div class="blind-spot-text">${this.escapeHTML(item.summary)}</div>
+                <div class="blind-spot-source">${this.escapeHTML(item.companyName)} · ${this.escapeHTML(item.positionTitle)} · ${this.escapeHTML(item.round)} · ${this.escapeHTML(item.date)}</div>
+            </div>`).join('')
+            : '<div style="color:#94a3b8;font-size:13px;">暂无知识盲区数据</div>';
 
         const moods = {};
         this.data.interviews.forEach(i => { moods[i.mood||'一般'] = (moods[i.mood||'一般']||0)+1; });
@@ -678,10 +751,11 @@ const app = {
         const moodHtml = Object.entries(moods).map(([m,c]) => `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span style="width:60px;font-size:12px;">${this.escapeHTML(m)}</span><div style="flex:1;height:6px;background:#f1f5f9;border-radius:3px;overflow:hidden;"><div style="width:${totalMood?Math.round(c/totalMood*100):0}%;height:100%;background:${moodColors[m]||'#94a3b8'};border-radius:3px;"></div></div><span style="width:24px;text-align:right;font-size:12px;">${c}</span></div>`).join('');
 
         document.getElementById('analytics-grid').innerHTML = `
-            <div class="panel" style="grid-column:1/-1;"><h3 style="font-size:14px;font-weight:700;margin-bottom:16px;">招聘漏斗</h3>${funnelHtml || '<div style="color:#94a3b8;">数据不足</div>'}</div>
+            <div class="panel" style="grid-column:1/-1;"><h3 style="font-size:14px;font-weight:700;margin-bottom:16px;">当前状态分布</h3>${distributionHtml || '<div style="color:#94a3b8;">数据不足</div>'}</div>
+            <div class="panel" style="grid-column:1/-1;"><h3 style="font-size:14px;font-weight:700;margin-bottom:16px;">招聘漏斗转化率</h3>${funnelHtml || '<div style="color:#94a3b8;">数据不足</div>'}</div>
             <div class="panel"><h3 style="font-size:14px;font-weight:700;margin-bottom:16px;">岗位类型表现</h3>${typeHtml || '<div style="color:#94a3b8;">数据不足</div>'}</div>
             <div class="panel"><h3 style="font-size:14px;font-weight:700;margin-bottom:16px;">简历版本效果</h3>${resumeHtml || '<div style="color:#94a3b8;">数据不足</div>'}</div>
-            <div class="panel" style="grid-column:1/-1;"><h3 style="font-size:14px;font-weight:700;margin-bottom:16px;">面试知识盲区</h3><div style="display:flex;flex-wrap:wrap;gap:6px;">${wordHtml}</div></div>
+            <div class="panel" style="grid-column:1/-1;"><h3 style="font-size:14px;font-weight:700;margin-bottom:16px;">面试知识盲区</h3><div class="blind-spot-list">${blindSpotHtml}</div></div>
             <div class="panel"><h3 style="font-size:14px;font-weight:700;margin-bottom:16px;">面试情绪分布</h3>${moodHtml || '<div style="color:#94a3b8;">暂无数据</div>'}</div>
         `;
     },
@@ -986,7 +1060,10 @@ const app = {
                     <div class="form-group"><label>自我评分</label><input type="range" id="m-iv-rating" min="1" max="5" value="${this.escapeHTML(iv.selfRating || 3)}" oninput="document.getElementById('rating-disp').textContent=this.value+'星'"><span id="rating-disp" style="font-size:12px;color:#3b82f6;font-weight:600;">${this.escapeHTML(iv.selfRating || 3)}星</span></div>
                     <div class="form-group"><label>结果</label><select id="m-iv-result">${['待反馈','通过','挂','待定'].map(r => `<option value="${r}" ${iv.result===r?'selected':''}>${r}</option>`).join('')}</select></div>
                 </div>
-                <div class="form-group"><label>情绪</label><div style="display:flex;gap:6px;flex-wrap:wrap;">${['紧张','平稳','超水平发挥','被问懵','一般'].map(m => `<button type="button" class="mood-btn ${(iv.mood||'平稳')===m?'active':''}" onclick="app.setMoodBtn(this)" data-mood="${m}">${m}</button>`).join('')}</div><input type="hidden" id="m-iv-mood" value="${this.escapeHTML(iv.mood || '平稳')}"></div>
+                <div class="form-group"><label>情绪</label><div class="mood-btn-group">${['紧张','平稳','超水平发挥','被问懵','一般'].map(m => {
+                    const selected = (iv.mood || '平稳') === m;
+                    return `<button type="button" class="mood-btn ${selected ? 'active selected' : ''}" aria-pressed="${selected ? 'true' : 'false'}" onclick="app.setMoodBtn(this)" data-mood="${m}">${m}</button>`;
+                }).join('')}</div><input type="hidden" id="m-iv-mood" value="${this.escapeHTML(iv.mood || '平稳')}"></div>
                 <div class="form-group"><label>面试问题（每行一个）</label><textarea id="m-iv-questions" rows="4">${this.escapeHTML(iv.questions || '')}</textarea></div>
                 <div class="form-group"><label>复盘笔记</label><textarea id="m-iv-notes" rows="4">${this.escapeHTML(iv.notes || '')}</textarea></div>`;
             footer.innerHTML = `${ivId?'<button class="btn-danger" data-action="deleteInterview">删除</button>':''}<div style="margin-left:auto;display:flex;gap:8px;"><button class="btn-secondary" data-action="closeModal">取消</button><button class="btn-primary" data-action="saveInterview">保存</button></div>`;
@@ -1005,8 +1082,12 @@ const app = {
     },
 
     setMoodBtn(btn) {
-        document.querySelectorAll('.mood-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
+        document.querySelectorAll('.mood-btn').forEach(b => {
+            b.classList.remove('active', 'selected');
+            b.setAttribute('aria-pressed', 'false');
+        });
+        btn.classList.add('active', 'selected');
+        btn.setAttribute('aria-pressed', 'true');
         document.getElementById('m-iv-mood').value = btn.dataset.mood;
     },
 
@@ -1203,7 +1284,7 @@ const app = {
                 <div class="panel" style="margin-bottom:20px;">
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
                         <h4 style="font-size:14px;font-weight:700;">进度时间线</h4>
-                        <button class="card-btn" onclick="app.openInterviewModal('${safePositionId}')">+ 记面试</button>
+                        <button class="card-btn" onclick="event.stopPropagation();app.openInterviewModal('${safePositionId}')">+ 记面试</button>
                     </div>
                     <div class="timeline">${acts.map(a => `<div class="timeline-item"><div class="timeline-dot"></div><div><span class="timeline-title">${this.escapeHTML(a.type)}</span><span class="timeline-date">${this.escapeHTML(a.date)}</span>${a.notes ? `<div class="timeline-note">${this.escapeHTML(a.notes)}</div>` : ''}</div></div>`).join('') || '<div style="color:#94a3b8;font-size:12px;">暂无记录</div>'}</div>
                 </div>
@@ -1211,8 +1292,8 @@ const app = {
             </div>
             <div class="detail-sidebar">
                 <div class="panel"><h4 style="font-size:14px;font-weight:700;margin-bottom:12px;">公司信息</h4><div style="font-size:13px;color:#475569;"><div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span>行业</span><span>${this.escapeHTML(c?.industry||'-')}</span></div><div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span>规模</span><span>${this.escapeHTML(c?.scale||'-')}</span></div><div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span>官网</span><a href="${this.escapeHTML(website)}" target="_blank" rel="noopener noreferrer" style="color:#3b82f6;">${website !== '#' ? '链接' : '-'}</a></div>${c?.notes ? `<div style="margin-top:8px;padding-top:8px;border-top:1px solid #e2e8f0;font-size:12px;line-height:1.5;">${this.escapeHTML(c.notes)}</div>` : ''}</div></div>
-                <div class="panel"><h4 style="font-size:14px;font-weight:700;margin-bottom:12px;">关联资料</h4>${r ? `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px;background:#f8fafc;border-radius:6px;"><div style="display:flex;align-items:center;gap:8px;flex:1;"><span style="font-size:20px;">📄</span><div><div style="font-size:13px;font-weight:600;">${this.escapeHTML(r.name)}</div><div style="font-size:11px;color:#64748b;">${this.escapeHTML(r.version||'')}</div></div></div>${r.fileData ? `<div style="display:flex;gap:4px;"><button class="card-btn" onclick="app.previewFile('${this.inlineArg(r.id)}')">👁️</button><button class="card-btn" onclick="app.downloadFile('${this.inlineArg(r.id)}', '${this.escapeJSString(r.fileName || '文件')}')">⬇️</button></div>` : ''}</div>` : '<div style="font-size:13px;color:#94a3b8;">未关联</div>'}</div>
-                <div class="panel"><h4 style="font-size:14px;font-weight:700;margin-bottom:12px;">面试记录</h4>${ivs.map(i => `<div class="interview-card" onclick="app.openInterviewModal('${safePositionId}', '${this.inlineArg(i.id)}')"><div class="interview-header"><span class="interview-round">${this.escapeHTML(i.round)}</span><span class="interview-result ${i.result==='通过'?'pass':i.result==='挂'?'fail':'pending'}">${this.escapeHTML(i.result)}</span></div><div class="interview-meta">${this.escapeHTML(i.date)} · ${this.escapeHTML(i.interviewer||'未知')}</div><div class="interview-tags"><span class="tag tag-mood">${this.escapeHTML(i.mood)}</span><span class="tag tag-rating">${this.escapeHTML(i.selfRating)}星</span></div></div>`).join('') || '<div style="font-size:13px;color:#94a3b8;">暂无记录</div>'}</div>
+                <div class="panel"><h4 style="font-size:14px;font-weight:700;margin-bottom:12px;">关联资料</h4>${r ? `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px;background:#f8fafc;border-radius:6px;"><div style="display:flex;align-items:center;gap:8px;flex:1;"><span style="font-size:20px;">📄</span><div><div style="font-size:13px;font-weight:600;">${this.escapeHTML(r.name)}</div><div style="font-size:11px;color:#64748b;">${this.escapeHTML(r.version||'')}</div></div></div>${r.fileData ? `<div style="display:flex;gap:4px;"><button class="card-btn" onclick="event.stopPropagation();app.previewFile('${this.inlineArg(r.id)}')">👁️</button><button class="card-btn" onclick="event.stopPropagation();app.downloadFile('${this.inlineArg(r.id)}', '${this.escapeJSString(r.fileName || '文件')}')">⬇️</button></div>` : ''}</div>` : '<div style="font-size:13px;color:#94a3b8;">未关联</div>'}</div>
+                <div class="panel"><h4 style="font-size:14px;font-weight:700;margin-bottom:12px;">面试记录</h4>${ivs.map(i => `<div class="interview-card" onclick="event.stopPropagation();app.openInterviewModal('${safePositionId}', '${this.inlineArg(i.id)}')"><div class="interview-header"><span class="interview-round">${this.escapeHTML(i.round)}</span><span class="interview-result ${i.result==='通过'?'pass':i.result==='挂'?'fail':'pending'}">${this.escapeHTML(i.result)}</span></div><div class="interview-meta">${this.escapeHTML(i.date)} · ${this.escapeHTML(i.interviewer||'未知')}</div><div class="interview-tags"><span class="tag tag-mood">${this.escapeHTML(i.mood)}</span><span class="tag tag-rating">${this.escapeHTML(i.selfRating)}星</span></div></div>`).join('') || '<div style="font-size:13px;color:#94a3b8;">暂无记录</div>'}</div>
             </div>
         `;
         document.getElementById('detail-backdrop').classList.remove('hidden');

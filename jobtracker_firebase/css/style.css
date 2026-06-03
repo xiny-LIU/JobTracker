@@ -485,6 +485,113 @@ body {
 .tag-mood { background: var(--blue-light); color: var(--blue); }
 .tag-rating { background: var(--amber-light); color: var(--amber); }
 
+.mood-btn-group {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.mood-btn {
+    padding: 7px 12px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: white;
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.mood-btn:hover {
+    border-color: var(--blue);
+    color: var(--blue);
+    background: var(--blue-light);
+}
+
+.mood-btn.active,
+.mood-btn.selected {
+    border-color: var(--blue);
+    background: var(--blue);
+    color: white;
+    box-shadow: 0 0 0 3px var(--blue-light);
+}
+
+.analytics-stage-row,
+.analytics-funnel-row {
+    margin-bottom: 10px;
+}
+
+.analytics-stage-row {
+    display: grid;
+    grid-template-columns: 64px 1fr 36px;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+}
+
+.analytics-stage-label {
+    color: var(--text-secondary);
+    font-weight: 600;
+}
+
+.analytics-stage-bar,
+.analytics-funnel-bar {
+    height: 6px;
+    background: #e2e8f0;
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.analytics-stage-bar > div,
+.analytics-funnel-bar > div {
+    height: 100%;
+    background: linear-gradient(to right, #3b82f6, #1e40af);
+    border-radius: 999px;
+}
+
+.analytics-stage-count {
+    color: var(--text);
+    font-size: 12px;
+    font-weight: 700;
+    text-align: right;
+}
+
+.analytics-funnel-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 5px;
+    color: var(--text-secondary);
+    font-size: 12px;
+}
+
+.blind-spot-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.blind-spot-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+}
+
+.blind-spot-text {
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.5;
+}
+
+.blind-spot-source {
+    color: var(--text-secondary);
+    font-size: 11px;
+    margin-top: 6px;
+}
+
 /* Settings */
 .settings-panel { max-width: 600px; }
 .setting-card {
@@ -671,6 +778,10 @@ body {
     gap: 10px;
 }
 
+.company-accordion-item.is-expanded {
+    margin-bottom: 8px;
+}
+
 .company-accordion-card {
     cursor: pointer;
     padding: 12px 14px;
@@ -708,14 +819,37 @@ body {
     background: var(--bg);
     color: var(--text-secondary);
     cursor: grab;
-    font-size: 14px;
-    line-height: 1;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
     transition: all 0.2s;
 }
+
+.drag-handle > span,
+.drag-handle > span::before,
+.drag-handle > span::after {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: currentColor;
+    box-shadow: 8px 0 0 currentColor;
+    content: '';
+    display: block;
+}
+
+.drag-handle > span {
+    position: relative;
+}
+
+.drag-handle > span::before,
+.drag-handle > span::after {
+    position: absolute;
+    left: 0;
+}
+
+.drag-handle > span::before { top: -7px; }
+.drag-handle > span::after { top: 7px; }
 
 .drag-handle:hover {
     color: var(--blue);
@@ -788,6 +922,24 @@ body {
     padding: 2px 8px;
 }
 
+.company-card-meta-icons {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 2px;
+}
+
+.company-meta-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 7px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--bg);
+    color: var(--text-secondary);
+}
+
 .company-toggle-btn {
     border: none;
     border-radius: 999px;
@@ -812,9 +964,12 @@ body {
 }
 
 .expanded-jobs-wrapper {
-    border-top: 1px solid var(--border);
-    margin-top: 2px;
-    padding: 14px 0 0 38px;
+    border-top: 1px solid #dbeafe;
+    margin: 2px 0 4px 38px;
+    padding: 14px;
+    background: #f8fbff;
+    border-radius: 0 0 10px 10px;
+    box-shadow: inset 3px 0 0 var(--blue-light);
 }
 
 .expanded-jobs-grid {
@@ -828,6 +983,8 @@ body {
     display: flex;
     flex-direction: column;
     padding: 16px;
+    background: white;
+    box-shadow: var(--shadow);
 }
 
 .expanded-jobs-grid .card-meta {
@@ -847,7 +1004,7 @@ body {
 
 .expanded-jobs-empty {
     grid-column: 1 / -1;
-    background: var(--card);
+    background: white;
     border: 1px dashed var(--border);
     border-radius: 8px;
     color: var(--text-secondary);
@@ -912,6 +1069,8 @@ body {
     .company-notes,
     .expanded-jobs-wrapper {
         padding-left: 0;
+        margin-left: 0;
     }
     .expanded-jobs-grid { grid-template-columns: 1fr; }
+    .blind-spot-list { grid-template-columns: 1fr; }
 }
