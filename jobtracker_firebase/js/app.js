@@ -385,7 +385,7 @@ const app = {
                         <div class="card-meta"><span>📍 ${this.escapeHTML(p.location || '未知')}</span><span>💰 ${this.escapeHTML(p.salary || '面议')}</span></div>
                         ${r ? `<div class="card-resume">📄 ${this.escapeHTML(r.name)}</div>` : ''}
                         <div class="card-footer">
-                            <span class="card-footer-text">${last ? `最近: ${this.escapeHTML(last.round)} ${this.escapeHTML(last.date)}` : '暂无面试'}</span>
+                            <span class="card-footer-text">${last ? `最近: ${this.escapeHTML(last.round)}${last.formatNote || last.interviewFormatNote ? ` · ${this.escapeHTML(last.formatNote || last.interviewFormatNote)}` : ''} ${this.escapeHTML(last.date)}` : '暂无面试'}</span>
                             <div class="card-actions">
                                 <button class="card-btn" onclick="event.stopPropagation();app.openPositionModal('${positionId}')">编辑</button>
                                 <button class="card-btn" onclick="event.stopPropagation();app.advance('${positionId}')">推进 ➜</button>
@@ -620,6 +620,102 @@ const app = {
         this.renderResumes();
     },
 
+    normalizeInterviewQAPairs(interview = {}) {
+        if (Array.isArray(interview.qaPairs) && interview.qaPairs.length) {
+            return interview.qaPairs.map((pair, index) => ({
+                id: pair.id || `qa_${index}`,
+                question: pair.question || '',
+                answer: pair.answer || '',
+                tags: Array.isArray(pair.tags)
+                    ? pair.tags
+                    : String(pair.tags || '').split(/,|，/).map(t => t.trim()).filter(Boolean),
+                createdAt: pair.createdAt || interview.createdAt || '',
+                updatedAt: pair.updatedAt || interview.updatedAt || pair.createdAt || interview.createdAt || ''
+            })).filter(pair => pair.question || pair.answer || pair.tags.length);
+        }
+
+        return String(interview.questions || interview.questionText || '')
+            .split(/\n/)
+            .map(line => line.trim())
+            .filter(Boolean)
+            .map((question, index) => ({
+                id: `${interview.id || 'legacy'}_qa_${index}`,
+                question,
+                answer: '',
+                tags: [],
+                createdAt: interview.createdAt || '',
+                updatedAt: interview.updatedAt || interview.createdAt || ''
+            }));
+    },
+
+    renderQAPairEditor(pairs = []) {
+        const qaPairs = pairs.length ? pairs : [{ id: this.createQAPairId(), question: '', answer: '', tags: [] }];
+        return qaPairs.map(pair => this.renderQAPairEditorItem(pair)).join('');
+    },
+
+    renderQAPairEditorItem(pair = {}) {
+        const tagsText = Array.isArray(pair.tags) ? pair.tags.join(', ') : (pair.tags || '');
+        return `<div class="qa-editor-card" data-qa-id="${this.escapeHTML(pair.id || this.createQAPairId())}" data-created-at="${this.escapeHTML(pair.createdAt || '')}">
+            <button type="button" class="qa-delete-btn" onclick="app.removeQAPair(this)">删除</button>
+            <div class="form-group"><label>问题</label><textarea class="qa-question" rows="2" placeholder="例如：请介绍一个你做过的复杂项目">${this.escapeHTML(pair.question || '')}</textarea></div>
+            <div class="form-group"><label>回答</label><textarea class="qa-answer" rows="3" placeholder="记录你的回答、追问或复盘要点">${this.escapeHTML(pair.answer || '')}</textarea></div>
+            <div class="form-group"><label>标签</label><input class="qa-tags" placeholder="算法, 项目, 职业规划" value="${this.escapeHTML(tagsText)}"></div>
+        </div>`;
+    },
+
+    createQAPairId() {
+        return `qa_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
+    },
+
+    addQAPair() {
+        const list = document.getElementById('qa-pair-list');
+        if (!list) return;
+        list.insertAdjacentHTML('beforeend', this.renderQAPairEditorItem({ id: this.createQAPairId(), question: '', answer: '', tags: [] }));
+    },
+
+    removeQAPair(btn) {
+        const card = btn.closest('.qa-editor-card');
+        if (!card) return;
+        const list = document.getElementById('qa-pair-list');
+        if (list && list.querySelectorAll('.qa-editor-card').length <= 1) {
+            card.querySelector('.qa-question').value = '';
+            card.querySelector('.qa-answer').value = '';
+            card.querySelector('.qa-tags').value = '';
+            return;
+        }
+        card.remove();
+    },
+
+    collectQAPairs() {
+        return [...document.querySelectorAll('#qa-pair-list .qa-editor-card')].map(card => {
+            const now = new Date().toISOString();
+            const tags = card.querySelector('.qa-tags').value
+                .split(/,|，/)
+                .map(tag => tag.trim())
+                .filter(Boolean);
+            return {
+                id: card.dataset.qaId || this.createQAPairId(),
+                question: card.querySelector('.qa-question').value.trim(),
+                answer: card.querySelector('.qa-answer').value.trim(),
+                tags,
+                createdAt: card.dataset.createdAt || now,
+                updatedAt: now
+            };
+        }).filter(pair => pair.question || pair.answer || pair.tags.length);
+    },
+
+    renderQAPairsReadOnly(interview, options = {}) {
+        const pairs = this.normalizeInterviewQAPairs(interview);
+        if (!pairs.length) return '';
+        const limit = options.limit || pairs.length;
+        return `<div class="qa-readonly-list">${pairs.slice(0, limit).map(pair => `
+            <div class="qa-readonly-card">
+                ${pair.question ? `<div class="qa-readonly-question">Q：${this.escapeHTML(pair.question)}</div>` : ''}
+                ${pair.answer ? `<div class="qa-readonly-answer">A：${this.escapeHTML(pair.answer)}</div>` : ''}
+                ${pair.tags?.length ? `<div class="qa-readonly-tags">${pair.tags.map(tag => `<span>${this.escapeHTML(tag)}</span>`).join('')}</div>` : ''}
+            </div>`).join('')}</div>`;
+    },
+
     getPositionType(title = '') {
         return title.includes('后端') || title.includes('后台') ? '后端' :
             title.includes('前端') ? '前端' :
@@ -663,6 +759,17 @@ const app = {
                 else if (value) String(value).split(/\n|,|，|;|；/).forEach(item => pushRecord(interview, item));
             });
 
+            this.normalizeInterviewQAPairs(interview).forEach(pair => {
+                pair.tags.forEach(tag => pushRecord(interview, tag));
+                [pair.question, pair.answer].forEach(value => {
+                    String(value || '')
+                        .split(/\n/)
+                        .map(line => line.trim())
+                        .filter(line => cuePattern.test(line))
+                        .forEach(line => pushRecord(interview, line));
+                });
+            });
+
             [interview.notes, interview.questions].forEach(value => {
                 String(value || '')
                     .split(/\n/)
@@ -683,9 +790,12 @@ const app = {
             const company = this.getCompany(position.companyId);
             if (!company) return;
 
-            String(interview.questions || '')
-                .split(/\n/)
-                .map(q => q.trim())
+            const questions = this.normalizeInterviewQAPairs(interview).length
+                ? this.normalizeInterviewQAPairs(interview).map(pair => pair.question)
+                : String(interview.questions || '').split(/\n/);
+
+            questions
+                .map(q => String(q || '').trim())
                 .filter(Boolean)
                 .forEach(question => {
                     const key = question.replace(/\s+/g, ' ').toLowerCase();
@@ -1113,13 +1223,18 @@ const app = {
             const posId = id;
             const ivId = arguments[2] || null;
             const iv = ivId ? this.data.interviews.find(x => x.id === ivId) : {};
+            const qaPairs = this.normalizeInterviewQAPairs(iv);
+            const syncChecked = ivId ? iv.syncJobStatus !== false : true;
             title.textContent = ivId ? '编辑面试' : '记录面试';
             body.innerHTML = `<input type="hidden" id="m-iv-id" value="${this.escapeHTML(ivId || '')}"><input type="hidden" id="m-iv-pos" value="${this.escapeHTML(posId || '')}">
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
                     <div class="form-group"><label>轮次</label><select id="m-iv-round">${['笔试','一面','二面','三面','HR面','其他'].map(r => `<option value="${r}" ${iv.round===r?'selected':''}>${r}</option>`).join('')}</select></div>
                     <div class="form-group"><label>日期</label><input type="date" id="m-iv-date" value="${this.escapeHTML(iv.date || new Date().toISOString().split('T')[0])}"></div>
                 </div>
-                <div class="form-group"><label>面试官</label><input id="m-iv-interviewer" value="${this.escapeHTML(iv.interviewer || '')}"></div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                    <div class="form-group"><label>面试官</label><input id="m-iv-interviewer" value="${this.escapeHTML(iv.interviewer || '')}"></div>
+                    <div class="form-group"><label>面试形式备注</label><input id="m-iv-format-note" placeholder="例如：电话面 / 腾讯会议 / 线上面 / 线下面 / 群面" value="${this.escapeHTML(iv.formatNote || iv.interviewFormatNote || '')}"></div>
+                </div>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
                     <div class="form-group"><label>自我评分</label><input type="range" id="m-iv-rating" min="1" max="5" value="${this.escapeHTML(iv.selfRating || 3)}" oninput="document.getElementById('rating-disp').textContent=this.value+'星'"><span id="rating-disp" style="font-size:12px;color:#3b82f6;font-weight:600;">${this.escapeHTML(iv.selfRating || 3)}星</span></div>
                     <div class="form-group"><label>结果</label><select id="m-iv-result">${['待反馈','通过','挂','待定'].map(r => `<option value="${r}" ${iv.result===r?'selected':''}>${r}</option>`).join('')}</select></div>
@@ -1128,7 +1243,12 @@ const app = {
                     const selected = (iv.mood || '平稳') === m;
                     return `<button type="button" class="mood-btn ${selected ? 'active selected' : ''}" aria-pressed="${selected ? 'true' : 'false'}" onclick="app.setMoodBtn(this)" data-mood="${m}">${m}</button>`;
                 }).join('')}</div><input type="hidden" id="m-iv-mood" value="${this.escapeHTML(iv.mood || '平稳')}"></div>
-                <div class="form-group"><label>面试问题（每行一个）</label><textarea id="m-iv-questions" rows="4">${this.escapeHTML(iv.questions || '')}</textarea></div>
+                <label class="checkbox-row"><input type="checkbox" id="m-iv-sync-status" ${syncChecked ? 'checked' : ''}> 同步更新岗位主进度</label>
+                <div class="form-group">
+                    <div class="qa-section-head"><label>面试问答</label><button type="button" class="card-btn" onclick="app.addQAPair()">新增问答</button></div>
+                    <div id="qa-pair-list" class="qa-editor-list">${this.renderQAPairEditor(qaPairs)}</div>
+                    <input type="hidden" id="m-iv-questions" value="${this.escapeHTML(iv.questions || '')}">
+                </div>
                 <div class="form-group"><label>复盘笔记</label><textarea id="m-iv-notes" rows="4">${this.escapeHTML(iv.notes || '')}</textarea></div>`;
             footer.innerHTML = `${ivId?'<button class="btn-danger" data-action="deleteInterview">删除</button>':''}<div style="margin-left:auto;display:flex;gap:8px;"><button class="btn-secondary" data-action="closeModal">取消</button><button class="btn-primary" data-action="saveInterview">保存</button></div>`;
         }
@@ -1277,7 +1397,22 @@ const app = {
     saveInterview() {
         const id = document.getElementById('m-iv-id').value;
         const posId = document.getElementById('m-iv-pos').value;
-        const data = { positionId: posId, round: document.getElementById('m-iv-round').value, date: document.getElementById('m-iv-date').value, interviewer: document.getElementById('m-iv-interviewer').value.trim(), selfRating: parseInt(document.getElementById('m-iv-rating').value), result: document.getElementById('m-iv-result').value, questions: document.getElementById('m-iv-questions').value.trim(), notes: document.getElementById('m-iv-notes').value.trim(), mood: document.getElementById('m-iv-mood').value };
+        const qaPairs = this.collectQAPairs();
+        const data = {
+            positionId: posId,
+            round: document.getElementById('m-iv-round').value,
+            date: document.getElementById('m-iv-date').value,
+            interviewer: document.getElementById('m-iv-interviewer').value.trim(),
+            formatNote: document.getElementById('m-iv-format-note').value.trim(),
+            interviewFormatNote: document.getElementById('m-iv-format-note').value.trim(),
+            selfRating: parseInt(document.getElementById('m-iv-rating').value),
+            result: document.getElementById('m-iv-result').value,
+            questions: qaPairs.map(pair => pair.question).filter(Boolean).join('\n') || document.getElementById('m-iv-questions').value.trim(),
+            qaPairs,
+            notes: document.getElementById('m-iv-notes').value.trim(),
+            mood: document.getElementById('m-iv-mood').value,
+            syncJobStatus: document.getElementById('m-iv-sync-status').checked
+        };
         if (id) DataStore.updateInterview(id, data);
         else DataStore.addInterview(data);
         this.data = DataStore.get();
@@ -1337,6 +1472,15 @@ const app = {
         const safePositionId = this.inlineArg(p.id);
         const website = this.safeURL(c?.website);
         const badgeClass = this.safeBadgeClass(p.status);
+        const interviewDetailHtml = ivs.map(i => {
+            const formatNote = i.formatNote || i.interviewFormatNote || '';
+            return `<div class="interview-card interview-card-expanded" onclick="event.stopPropagation();app.openInterviewModal('${safePositionId}', '${this.inlineArg(i.id)}')">
+                <div class="interview-header"><span class="interview-round">${this.escapeHTML(i.round)}</span><span class="interview-result ${i.result==='通过'?'pass':i.result==='挂'?'fail':'pending'}">${this.escapeHTML(i.result)}</span></div>
+                <div class="interview-meta">${this.escapeHTML(i.date)} · ${this.escapeHTML(i.interviewer||'未知')}${formatNote ? ` · ${this.escapeHTML(formatNote)}` : ''}</div>
+                <div class="interview-tags"><span class="tag tag-mood">${this.escapeHTML(i.mood)}</span><span class="tag tag-rating">${this.escapeHTML(i.selfRating)}星</span></div>
+                ${this.renderQAPairsReadOnly(i, { limit: 4 })}
+            </div>`;
+        }).join('') || '<div style="font-size:13px;color:#94a3b8;">暂无记录</div>';
         document.getElementById('detail-body').innerHTML = `
             <div class="detail-main">
                 <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">
@@ -1357,7 +1501,7 @@ const app = {
             <div class="detail-sidebar">
                 <div class="panel"><h4 style="font-size:14px;font-weight:700;margin-bottom:12px;">公司信息</h4><div style="font-size:13px;color:#475569;"><div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span>行业</span><span>${this.escapeHTML(c?.industry||'-')}</span></div><div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span>规模</span><span>${this.escapeHTML(c?.scale||'-')}</span></div><div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span>官网</span><a href="${this.escapeHTML(website)}" target="_blank" rel="noopener noreferrer" style="color:#3b82f6;">${website !== '#' ? '链接' : '-'}</a></div>${c?.notes ? `<div style="margin-top:8px;padding-top:8px;border-top:1px solid #e2e8f0;font-size:12px;line-height:1.5;">${this.escapeHTML(c.notes)}</div>` : ''}</div></div>
                 <div class="panel"><h4 style="font-size:14px;font-weight:700;margin-bottom:12px;">关联资料</h4>${r ? `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px;background:#f8fafc;border-radius:6px;"><div style="display:flex;align-items:center;gap:8px;flex:1;"><span style="font-size:20px;">📄</span><div><div style="font-size:13px;font-weight:600;">${this.escapeHTML(r.name)}</div><div style="font-size:11px;color:#64748b;">${this.escapeHTML(r.version||'')}</div></div></div>${r.fileData ? `<div style="display:flex;gap:4px;"><button class="card-btn" onclick="event.stopPropagation();app.previewFile('${this.inlineArg(r.id)}')">👁️</button><button class="card-btn" onclick="event.stopPropagation();app.downloadFile('${this.inlineArg(r.id)}', '${this.escapeJSString(r.fileName || '文件')}')">⬇️</button></div>` : ''}</div>` : '<div style="font-size:13px;color:#94a3b8;">未关联</div>'}</div>
-                <div class="panel"><h4 style="font-size:14px;font-weight:700;margin-bottom:12px;">面试记录</h4>${ivs.map(i => `<div class="interview-card" onclick="event.stopPropagation();app.openInterviewModal('${safePositionId}', '${this.inlineArg(i.id)}')"><div class="interview-header"><span class="interview-round">${this.escapeHTML(i.round)}</span><span class="interview-result ${i.result==='通过'?'pass':i.result==='挂'?'fail':'pending'}">${this.escapeHTML(i.result)}</span></div><div class="interview-meta">${this.escapeHTML(i.date)} · ${this.escapeHTML(i.interviewer||'未知')}</div><div class="interview-tags"><span class="tag tag-mood">${this.escapeHTML(i.mood)}</span><span class="tag tag-rating">${this.escapeHTML(i.selfRating)}星</span></div></div>`).join('') || '<div style="font-size:13px;color:#94a3b8;">暂无记录</div>'}</div>
+                <div class="panel"><h4 style="font-size:14px;font-weight:700;margin-bottom:12px;">面试记录</h4>${interviewDetailHtml}</div>
             </div>
         `;
         document.getElementById('detail-backdrop').classList.remove('hidden');
@@ -1374,16 +1518,23 @@ const app = {
         const c = this.getCompany(p.companyId);
         const r = this.data.resumes.find(x => x.id === p.resumeId);
         const ivs = this.data.interviews.filter(i => i.positionId === p.id).sort((a,b) => new Date(b.date) - new Date(a.date));
-        const questions = ivs.flatMap(i => (i.questions||'').split('\n').filter(q=>q.trim())).slice(0, 10);
+        const questions = ivs.flatMap(i => {
+            const pairs = this.normalizeInterviewQAPairs(i);
+            return pairs.length ? pairs.map(pair => pair.question).filter(Boolean) : (i.questions||'').split('\n').filter(q=>q.trim());
+        }).slice(0, 10);
         const companyWebsite = this.safeURL(c?.website);
         const safeTitle = `${this.escapeHTML(c?.name || '')} · ${this.escapeHTML(p.title || '')}`;
         const prepNoteKey = `prep_notes_${c?.id || 'unknown'}*${p.id}`;
         const savedPrepNote = localStorage.getItem(prepNoteKey) || '';
         const safePrepNoteKey = this.escapeJSString(prepNoteKey);
         const safePrepNote = this.escapeHTML(savedPrepNote);
+        const reviewHtml = ivs.length ? `<h2>💡 往期复盘</h2>${ivs.slice(0,2).map(i => {
+            const formatNote = i.formatNote || i.interviewFormatNote || '';
+            return `<div class="box" style="background:#fdf2f8;border-color:#fbcfe8;"><strong>${this.escapeHTML(i.round)} · ${this.escapeHTML(i.date)}${formatNote ? ` · ${this.escapeHTML(formatNote)}` : ''} · ${this.escapeHTML(i.mood)} · ${this.escapeHTML(i.selfRating)}星</strong>${this.renderQAPairsReadOnly(i)}<div style="white-space:pre-wrap;margin-top:8px;font-size:13px;">${this.escapeHTML(i.notes||'无笔记')}</div></div>`;
+        }).join('')}` : '';
 
         const win = window.open('', '_blank');
-        win.document.write(`<html><head><title>面试准备包 - ${safeTitle}</title><style>body{font-family:-apple-system,sans-serif;max-width:800px;margin:40px auto;padding:0 20px;color:#1e293b;line-height:1.6;}h1{font-size:24px;border-bottom:2px solid #e2e8f0;padding-bottom:12px;}h2{font-size:16px;color:#3b82f6;margin-top:24px;}.box{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px;margin:12px 0;font-size:14px;}.box strong{color:#0f172a;}ul{margin:8px 0;padding-left:20px;}li{margin:4px 0;}.print-btn{position:fixed;top:20px;right:20px;padding:8px 16px;background:#3b82f6;color:white;border:none;border-radius:6px;cursor:pointer;}.prep-note-box{border-style:dashed;background:#fffdf7;}.prep-note-area{width:100%;min-height:140px;border:0;background:transparent;resize:vertical;font:inherit;color:#1e293b;line-height:1.6;outline:none;}.prep-note-status{font-size:12px;color:#64748b;margin-top:8px;}@media print{.print-btn,.prep-note-status{display:none;}.prep-note-area{border:0;resize:none;min-height:120px;overflow:visible;}}</style></head><body><button class="print-btn" onclick="window.print()">🖨️ 打印 / 存PDF</button><h1>${safeTitle}</h1><p style="color:#64748b;">生成于 ${this.escapeHTML(new Date().toLocaleDateString())}</p><div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;"><div class="box"><strong>公司信息</strong><br>行业：${this.escapeHTML(c?.industry||'-')}<br>规模：${this.escapeHTML(c?.scale||'-')}<br>地点：${this.escapeHTML(p.location||'-')}<br>薪资：${this.escapeHTML(p.salary||'-')}<br>${companyWebsite !== '#'?`官网：<a href="${this.escapeHTML(companyWebsite)}" rel="noopener noreferrer">${this.escapeHTML(companyWebsite)}</a><br>`:''}${c?.notes?`<div style="margin-top:8px;font-size:13px;">${this.escapeHTML(c.notes)}</div>`:''}</div><div class="box"><strong>岗位JD</strong><div style="white-space:pre-wrap;">${this.escapeHTML(p.jd||'暂无')}</div></div></div>${r?`<h2>📄 关联资料：${this.escapeHTML(r.name)}</h2><div class="box" style="background:#ecfdf5;border-color:#a7f3d0;"><div style="white-space:pre-wrap;font-size:13px;">${this.escapeHTML(r.content||'')}</div></div>`:''}${questions.length?`<h2>📝 历史高频问题</h2><div class="box"><ul>${questions.map(q=>`<li>${this.escapeHTML(q)}</li>`).join('')}</ul></div>`:''}${ivs.length?`<h2>💡 往期复盘</h2>${ivs.slice(0,2).map(i=>`<div class="box" style="background:#fdf2f8;border-color:#fbcfe8;"><strong>${this.escapeHTML(i.round)} · ${this.escapeHTML(i.date)} · ${this.escapeHTML(i.mood)} · ${this.escapeHTML(i.selfRating)}星</strong><div style="white-space:pre-wrap;margin-top:8px;font-size:13px;">${this.escapeHTML(i.notes||'无笔记')}</div></div>`).join('')}`:''}<h2>✏️ 临时笔记区</h2><div class="box prep-note-box"><textarea id="prep-note-area" class="prep-note-area" placeholder="此处可补充临时知识点、追问清单或面试前提醒...">${safePrepNote}</textarea><div id="prep-note-status" class="prep-note-status">笔记会自动保存到本机</div></div><script>(function(){var key='${safePrepNoteKey}';var area=document.getElementById('prep-note-area');var status=document.getElementById('prep-note-status');var timer;function save(){localStorage.setItem(key,area.value);if(status)status.textContent='已自动保存 '+new Date().toLocaleTimeString();}area.addEventListener('input',function(){clearTimeout(timer);timer=setTimeout(save,250);});area.addEventListener('change',save);})();</script></body></html>`);
+        win.document.write(`<html><head><title>面试准备包 - ${safeTitle}</title><style>body{font-family:-apple-system,sans-serif;max-width:800px;margin:40px auto;padding:0 20px;color:#1e293b;line-height:1.6;}h1{font-size:24px;border-bottom:2px solid #e2e8f0;padding-bottom:12px;}h2{font-size:16px;color:#3b82f6;margin-top:24px;}.box{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px;margin:12px 0;font-size:14px;}.box strong{color:#0f172a;}ul{margin:8px 0;padding-left:20px;}li{margin:4px 0;}.print-btn{position:fixed;top:20px;right:20px;padding:8px 16px;background:#3b82f6;color:white;border:none;border-radius:6px;cursor:pointer;}.prep-note-box{border-style:dashed;background:#fffdf7;}.prep-note-area{width:100%;min-height:140px;border:0;background:transparent;resize:vertical;font:inherit;color:#1e293b;line-height:1.6;outline:none;}.prep-note-status{font-size:12px;color:#64748b;margin-top:8px;}.qa-readonly-card{background:white;border:1px solid #e2e8f0;border-radius:8px;margin-top:8px;padding:10px;}.qa-readonly-question{font-weight:700;}.qa-readonly-answer{white-space:pre-wrap;margin-top:6px;color:#475569;}.qa-readonly-tags span{display:inline-block;background:#eef2ff;border-radius:999px;color:#4338ca;font-size:11px;margin:6px 4px 0 0;padding:2px 7px;}@media print{.print-btn,.prep-note-status{display:none;}.prep-note-area{border:0;resize:none;min-height:120px;overflow:visible;}}</style></head><body><button class="print-btn" onclick="window.print()">🖨️ 打印 / 存PDF</button><h1>${safeTitle}</h1><p style="color:#64748b;">生成于 ${this.escapeHTML(new Date().toLocaleDateString())}</p><div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;"><div class="box"><strong>公司信息</strong><br>行业：${this.escapeHTML(c?.industry||'-')}<br>规模：${this.escapeHTML(c?.scale||'-')}<br>地点：${this.escapeHTML(p.location||'-')}<br>薪资：${this.escapeHTML(p.salary||'-')}<br>${companyWebsite !== '#'?`官网：<a href="${this.escapeHTML(companyWebsite)}" rel="noopener noreferrer">${this.escapeHTML(companyWebsite)}</a><br>`:''}${c?.notes?`<div style="margin-top:8px;font-size:13px;">${this.escapeHTML(c.notes)}</div>`:''}</div><div class="box"><strong>岗位JD</strong><div style="white-space:pre-wrap;">${this.escapeHTML(p.jd||'暂无')}</div></div></div>${r?`<h2>📄 关联资料：${this.escapeHTML(r.name)}</h2><div class="box" style="background:#ecfdf5;border-color:#a7f3d0;"><div style="white-space:pre-wrap;font-size:13px;">${this.escapeHTML(r.content||'')}</div></div>`:''}${questions.length?`<h2>📝 历史高频问题</h2><div class="box"><ul>${questions.map(q=>`<li>${this.escapeHTML(q)}</li>`).join('')}</ul></div>`:''}${reviewHtml}<h2>✏️ 临时笔记区</h2><div class="box prep-note-box"><textarea id="prep-note-area" class="prep-note-area" placeholder="此处可补充临时知识点、追问清单或面试前提醒...">${safePrepNote}</textarea><div id="prep-note-status" class="prep-note-status">笔记会自动保存到本机</div></div><script>(function(){var key='${safePrepNoteKey}';var area=document.getElementById('prep-note-area');var status=document.getElementById('prep-note-status');var timer;function save(){localStorage.setItem(key,area.value);if(status)status.textContent='已自动保存 '+new Date().toLocaleTimeString();}area.addEventListener('input',function(){clearTimeout(timer);timer=setTimeout(save,250);});area.addEventListener('change',save);})();</script></body></html>`);
         win.document.close();
     },
 

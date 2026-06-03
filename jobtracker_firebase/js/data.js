@@ -39,16 +39,52 @@ const DataStore = {
                 city: company.city || ''
             }))
             : [];
+        const interviews = Array.isArray(safe.interviews)
+            ? safe.interviews.map(interview => ({
+                ...interview,
+                qaPairs: this.normalizeQAPairs(interview),
+                formatNote: interview.formatNote || interview.interviewFormatNote || ''
+            }))
+            : [];
         return {
             ...base,
             ...safe,
             companies,
             positions: Array.isArray(safe.positions) ? safe.positions : [],
             resumes: Array.isArray(safe.resumes) ? safe.resumes : [],
-            interviews: Array.isArray(safe.interviews) ? safe.interviews : [],
+            interviews,
             activities: Array.isArray(safe.activities) ? safe.activities : [],
             config: { ...base.config, ...(safe.config || {}) }
         };
+    },
+
+    normalizeQAPairs(interview = {}) {
+        if (Array.isArray(interview.qaPairs)) {
+            return interview.qaPairs.map((pair, index) => ({
+                id: pair.id || `${interview.id || 'qa'}_${index}`,
+                question: pair.question || '',
+                answer: pair.answer || '',
+                tags: Array.isArray(pair.tags)
+                    ? pair.tags
+                    : String(pair.tags || '').split(/,|，/).map(t => t.trim()).filter(Boolean),
+                createdAt: pair.createdAt || interview.createdAt || '',
+                updatedAt: pair.updatedAt || interview.updatedAt || pair.createdAt || interview.createdAt || ''
+            })).filter(pair => pair.question || pair.answer || pair.tags.length);
+        }
+
+        const legacyText = interview.questions || interview.questionText || '';
+        return String(legacyText)
+            .split(/\n/)
+            .map(line => line.trim())
+            .filter(Boolean)
+            .map((question, index) => ({
+                id: `${interview.id || 'legacy'}_qa_${index}`,
+                question,
+                answer: '',
+                tags: [],
+                createdAt: interview.createdAt || '',
+                updatedAt: interview.updatedAt || interview.createdAt || ''
+            }));
     },
 
     uid(prefix = 'id') {
@@ -110,14 +146,23 @@ const DataStore = {
         const data = this.get();
         interview.id = this.uid('i');
         interview.createdAt = new Date().toISOString();
+        interview.updatedAt = interview.createdAt;
+        interview.qaPairs = this.normalizeQAPairs(interview);
+        interview.formatNote = interview.formatNote || interview.interviewFormatNote || '';
+        interview.syncJobStatus = interview.syncJobStatus !== false;
         data.interviews.push(interview);
         const pos = data.positions.find(p => p.id === interview.positionId);
         if (pos && !['Offer','拒绝','接受'].includes(pos.status)) {
             const map = { '笔试': '笔试', '一面': '一面', '二面': '二面', '三面': '三面', 'HR面': 'HR面' };
-            if (map[interview.round]) {
-                pos.status = map[interview.round];
+            const flow = ['未投递', '投递', '笔试', '一面', '二面', '三面', 'HR面', 'Offer', '接受'];
+            const targetStatus = map[interview.round];
+            const shouldAdvance = targetStatus && flow.indexOf(targetStatus) >= flow.indexOf(pos.status);
+            if (interview.syncJobStatus && shouldAdvance) {
+                pos.status = targetStatus;
                 pos.updatedAt = interview.createdAt;
                 this.addActivity(pos.id, pos.status, `${interview.round}完成`, interview.date, data);
+            } else {
+                this.addActivity(pos.id, interview.round || '面试', interview.syncJobStatus ? '记录面试（未改变主进度）' : '记录面试（未同步主进度）', interview.date, data);
             }
         }
         this.set(data);
@@ -128,7 +173,26 @@ const DataStore = {
         const data = this.get();
         const idx = data.interviews.findIndex(i => i.id === id);
         if (idx >= 0) {
-            data.interviews[idx] = { ...data.interviews[idx], ...updates };
+            const now = new Date().toISOString();
+            const next = {
+                ...data.interviews[idx],
+                ...updates,
+                updatedAt: now,
+                formatNote: updates.formatNote || updates.interviewFormatNote || data.interviews[idx].formatNote || '',
+                syncJobStatus: updates.syncJobStatus === undefined ? data.interviews[idx].syncJobStatus : updates.syncJobStatus
+            };
+            next.qaPairs = this.normalizeQAPairs(next);
+            data.interviews[idx] = next;
+            const pos = data.positions.find(p => p.id === next.positionId);
+            const map = { '笔试': '笔试', '一面': '一面', '二面': '二面', '三面': '三面', 'HR面': 'HR面' };
+            const flow = ['未投递', '投递', '笔试', '一面', '二面', '三面', 'HR面', 'Offer', '接受'];
+            const targetStatus = map[next.round];
+            const shouldAdvance = pos && targetStatus && flow.indexOf(targetStatus) >= flow.indexOf(pos.status);
+            if (pos && next.syncJobStatus && shouldAdvance && !['Offer','拒绝','接受'].includes(pos.status) && pos.status !== targetStatus) {
+                pos.status = targetStatus;
+                pos.updatedAt = now;
+                this.addActivity(pos.id, pos.status, `${next.round}完成`, next.date, data);
+            }
             this.set(data);
         }
     },
