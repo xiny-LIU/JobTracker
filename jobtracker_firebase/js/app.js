@@ -451,7 +451,7 @@ const app = {
                     const stars = Array(5).fill(0).map((_,i) => `<span class="card-star ${i < p.priority ? 'active' : ''}">★</span>`).join('');
                     const positionId = this.inlineArg(p.id);
                     const positionBadgeClass = this.safeBadgeClass(p.status);
-                    return `<div class="card" onclick="event.stopPropagation();app.openDetail('${positionId}')">
+                    return `<div class="card position-card" onclick="event.stopPropagation();app.openDetail('${positionId}')">
                         <div class="card-header">
                             <div class="card-title">
                                 <div class="card-logo">${this.escapeHTML((c?.name || '公')[0])}</div>
@@ -466,8 +466,8 @@ const app = {
                             <span class="card-footer-text">${last ? `最近: ${this.escapeHTML(last.round)}${last.formatNote || last.interviewFormatNote ? ` · ${this.escapeHTML(last.formatNote || last.interviewFormatNote)}` : ''} ${this.escapeHTML(last.date)}` : '暂无面试'}</span>
                             <div class="card-actions">
                                 <button class="card-btn" onclick="event.stopPropagation();app.openPositionModal('${positionId}')">编辑</button>
-                                <button class="card-btn" onclick="event.stopPropagation();app.advance('${positionId}')">推进 ➜</button>
-                                <button class="card-btn" onclick="event.stopPropagation();app.openInterviewModal('${positionId}')">记面试</button>
+                                <button class="card-btn" onclick="event.stopPropagation();app.advance('${positionId}')">推进</button>
+                                <button class="card-btn" onclick="event.stopPropagation();app.openInterviewModal('${positionId}')">记</button>
                             </div>
                         </div>
                     </div>`;
