@@ -794,6 +794,10 @@ const app = {
             </div>`).join('')}</div>`;
     },
 
+    getActivityTypes() {
+        return ['投递', '笔试', '面试', '复盘', '备注', '其他'];
+    },
+
     getPositionType(title = '') {
         return title.includes('后端') || title.includes('后台') ? '后端' :
             title.includes('前端') ? '前端' :
@@ -1246,7 +1250,7 @@ const app = {
             body.innerHTML = `<div class="form-group"><label>日志标题 *</label><input id="m-act-title" placeholder="例如：补充一次复盘记录"></div>
                 <div class="form-group"><label>日志详情</label><textarea id="m-act-detail" rows="3" placeholder="记录当时发生了什么"></textarea></div>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-                    <div class="form-group"><label>日志类型</label><select id="m-act-type">${['投递','面试','复盘','备注','其他'].map(t => `<option value="${t}">${t}</option>`).join('')}</select></div>
+                    <div class="form-group"><label>日志类型</label><select id="m-act-type">${this.getActivityTypes().map(t => `<option value="${t}">${t}</option>`).join('')}</select></div>
                     <div class="form-group"><label>日期</label><input type="date" id="m-act-date" value="${new Date().toISOString().split('T')[0]}"></div>
                 </div>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">

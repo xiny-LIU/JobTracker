@@ -357,9 +357,32 @@ body {
     display: flex; align-items: center; gap: 6px;
     margin-bottom: 12px;
 }
-.card-footer { display: flex; justify-content: space-between; align-items: center; padding-top: 12px; border-top: 1px solid var(--border); }
-.card-footer-text { font-size: 12px; color: var(--text-secondary); }
-.card-actions { display: flex; gap: 6px; }
+.card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 8px 10px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+}
+.card-footer-text {
+    flex: 1 1 150px;
+    min-width: 0;
+    max-width: 100%;
+    font-size: 12px;
+    line-height: 1.45;
+    color: var(--text-secondary);
+    overflow-wrap: anywhere;
+}
+.card-actions {
+    display: flex;
+    gap: 6px;
+    flex: 0 0 auto;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    margin-left: auto;
+}
 .card-btn {
     padding: 4px 8px;
     border-radius: 4px;
@@ -606,7 +629,7 @@ body {
     display: flex;
     justify-content: space-between;
     gap: 12px;
-    margin-bottom: 10px;
+    margin-bottom: 8px;
 }
 
 .qa-section-head label {
@@ -615,23 +638,44 @@ body {
 
 .qa-editor-list {
     display: grid;
-    gap: 12px;
+    gap: 10px;
 }
 
 .qa-editor-card {
     background: #f8fafc;
     border: 1px solid var(--border);
     border-radius: 8px;
-    padding: 12px;
+    padding: 10px 12px;
     position: relative;
 }
 
 .qa-editor-card .form-group {
-    margin-bottom: 10px;
+    margin-bottom: 7px;
+}
+
+.qa-editor-card label {
+    color: var(--text-secondary);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0;
+    margin-bottom: 4px;
 }
 
 .qa-editor-card .form-group:last-child {
     margin-bottom: 0;
+}
+
+.qa-editor-card textarea,
+.qa-editor-card input {
+    font-size: 12px;
+}
+
+.qa-editor-card .qa-question {
+    min-height: 42px;
+}
+
+.qa-editor-card .qa-answer {
+    min-height: 74px;
 }
 
 .qa-delete-btn {
@@ -639,11 +683,11 @@ body {
     border: none;
     color: var(--text-secondary);
     cursor: pointer;
-    font-size: 12px;
+    font-size: 11px;
     padding: 2px 0;
     position: absolute;
     right: 12px;
-    top: 10px;
+    top: 8px;
 }
 
 .qa-delete-btn:hover {
