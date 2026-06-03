@@ -192,6 +192,80 @@ body {
 .activity-content { flex: 1; color: var(--text); }
 .activity-note { color: var(--text-secondary); font-size: 12px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
+.panel-title-row {
+    align-items: center;
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.activity-delete-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 12px;
+    padding: 2px 0;
+}
+
+.activity-delete-btn:hover {
+    color: var(--red);
+}
+
+.manual-badge {
+    background: #f1f5f9;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    color: var(--text-secondary);
+    display: inline-flex;
+    font-size: 11px;
+    margin-right: 6px;
+    padding: 1px 6px;
+}
+
+.markdown-body {
+    color: var(--text-secondary);
+    font-size: 13px;
+    line-height: 1.7;
+}
+
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3 {
+    color: var(--text);
+    font-weight: 700;
+    line-height: 1.35;
+    margin: 10px 0 6px;
+}
+
+.markdown-body h1 { font-size: 20px; }
+.markdown-body h2 { font-size: 17px; }
+.markdown-body h3 { font-size: 15px; }
+.markdown-body p { margin: 8px 0; }
+.markdown-body ul,
+.markdown-body ol {
+    margin: 8px 0;
+    padding-left: 22px;
+}
+
+.markdown-body li {
+    margin: 3px 0;
+}
+
+.markdown-body blockquote {
+    background: #f8fafc;
+    border-left: 3px solid #93c5fd;
+    border-radius: 6px;
+    color: #475569;
+    margin: 10px 0;
+    padding: 8px 12px;
+}
+
+.markdown-empty {
+    color: #94a3b8;
+    font-size: 13px;
+}
+
 /* Status badges */
 .badge-未投递 { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
 .badge-投递 { background: #dbeafe; color: #1d4ed8; border: 1px solid #bfdbfe; }

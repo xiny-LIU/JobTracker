@@ -70,6 +70,82 @@ const app = {
         }[ch]));
     },
 
+    renderMarkdown(text) {
+        const source = String(text || '').replace(/\r\n/g, '\n').trim();
+        if (!source) return '<div class="markdown-empty">暂无</div>';
+
+        const renderInline = value => this.escapeHTML(value)
+            .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+        const lines = source.split('\n');
+        const html = [];
+        let paragraph = [];
+        let listType = null;
+
+        const flushParagraph = () => {
+            if (!paragraph.length) return;
+            html.push(`<p>${paragraph.map(renderInline).join('<br>')}</p>`);
+            paragraph = [];
+        };
+        const closeList = () => {
+            if (!listType) return;
+            html.push(`</${listType}>`);
+            listType = null;
+        };
+        const openList = type => {
+            if (listType === type) return;
+            closeList();
+            flushParagraph();
+            listType = type;
+            html.push(`<${type}>`);
+        };
+
+        lines.forEach(rawLine => {
+            const line = rawLine.trim();
+            if (!line) {
+                flushParagraph();
+                closeList();
+                return;
+            }
+
+            const heading = line.match(/^(#{1,3})\s+(.+)$/);
+            if (heading) {
+                flushParagraph();
+                closeList();
+                html.push(`<h${heading[1].length}>${renderInline(heading[2])}</h${heading[1].length}>`);
+                return;
+            }
+
+            const quote = line.match(/^>\s?(.+)$/);
+            if (quote) {
+                flushParagraph();
+                closeList();
+                html.push(`<blockquote>${renderInline(quote[1])}</blockquote>`);
+                return;
+            }
+
+            const unordered = line.match(/^\*\s+(.+)$/);
+            if (unordered) {
+                openList('ul');
+                html.push(`<li>${renderInline(unordered[1])}</li>`);
+                return;
+            }
+
+            const ordered = line.match(/^\d+\.\s+(.+)$/);
+            if (ordered) {
+                openList('ol');
+                html.push(`<li>${renderInline(ordered[1])}</li>`);
+                return;
+            }
+
+            closeList();
+            paragraph.push(line);
+        });
+
+        flushParagraph();
+        closeList();
+        return `<div class="markdown-body">${html.join('')}</div>`;
+    },
+
     escapeJSString(value) {
         return String(value ?? '')
             .replace(/\\/g, '\\\\')
@@ -244,16 +320,18 @@ const app = {
                 </div>`).join('');
 
         // Activities
-        const acts = [...this.data.activities].sort((a,b) => new Date(b.date) - new Date(a.date)).slice(0, 10);
+        const acts = [...this.data.activities].sort((a,b) => new Date(b.createdAt || b.date) - new Date(a.createdAt || a.date)).slice(0, 10);
         document.getElementById('recent-activities').innerHTML = acts.map(a => {
-            const p = this.data.positions.find(x => x.id === a.positionId);
-            const c = p ? this.getCompany(p.companyId) : null;
+            const p = this.data.positions.find(x => x.id === (a.jobId || a.positionId));
+            const c = a.companyId ? this.getCompany(a.companyId) : (p ? this.getCompany(p.companyId) : null);
             const badgeClass = this.safeBadgeClass(a.type);
+            const activityId = this.inlineArg(a.id);
             return `<div class="activity-item">
-                <div class="activity-date">${this.escapeHTML(a.date)}</div>
+                <div class="activity-date">${this.escapeHTML(a.date || String(a.createdAt || '').split('T')[0])}</div>
                 <span class="activity-badge badge-${badgeClass}">${this.escapeHTML(a.type)}</span>
-                <div class="activity-content">${this.escapeHTML(c?.name || '')} · ${this.escapeHTML(p?.title || '')}</div>
-                ${a.notes ? `<div class="activity-note">${this.escapeHTML(a.notes)}</div>` : ''}
+                <div class="activity-content">${a.manual ? '<span class="manual-badge">手动</span>' : ''}${this.escapeHTML(a.title || a.type)}${c || p ? ` · ${this.escapeHTML(c?.name || '')} ${this.escapeHTML(p?.title || '')}` : ''}</div>
+                ${a.detail || a.notes ? `<div class="activity-note">${this.escapeHTML(a.detail || a.notes)}</div>` : ''}
+                <button class="activity-delete-btn" title="删除活动记录" onclick="event.stopPropagation();app.deleteActivity('${activityId}')">删除</button>
             </div>`;
         }).join('') || '<div style="text-align:center;color:#94a3b8;padding:20px;">暂无记录</div>';
     },
@@ -711,7 +789,7 @@ const app = {
         return `<div class="qa-readonly-list">${pairs.slice(0, limit).map(pair => `
             <div class="qa-readonly-card">
                 ${pair.question ? `<div class="qa-readonly-question">Q：${this.escapeHTML(pair.question)}</div>` : ''}
-                ${pair.answer ? `<div class="qa-readonly-answer">A：${this.escapeHTML(pair.answer)}</div>` : ''}
+                ${pair.answer ? `<div class="qa-readonly-answer"><span>A：</span>${this.renderMarkdown(pair.answer)}</div>` : ''}
                 ${pair.tags?.length ? `<div class="qa-readonly-tags">${pair.tags.map(tag => `<span>${this.escapeHTML(tag)}</span>`).join('')}</div>` : ''}
             </div>`).join('')}</div>`;
     },
@@ -902,7 +980,7 @@ const app = {
                 const p = this.data.positions.find(x => x.id === i.positionId);
                 const c = p ? this.getCompany(p.companyId) : null;
                 const note = String(i.notes || '').trim();
-                return `<div class="review-summary-item"><div>${this.escapeHTML(c?.name || '未知公司')} · ${this.escapeHTML(p?.title || '未知岗位')}</div><small>${this.escapeHTML(i.round || '未知轮次')} · ${this.escapeHTML(i.date || i.createdAt || '未知日期')}</small><p>${this.escapeHTML(note.length > 120 ? `${note.slice(0, 120)}...` : note)}</p></div>`;
+                return `<div class="review-summary-item"><div>${this.escapeHTML(c?.name || '未知公司')} · ${this.escapeHTML(p?.title || '未知岗位')}</div><small>${this.escapeHTML(i.round || '未知轮次')} · ${this.escapeHTML(i.date || i.createdAt || '未知日期')}</small>${this.renderMarkdown(note.length > 120 ? `${note.slice(0, 120)}...` : note)}</div>`;
             }).join('')
             : '<div style="color:#94a3b8;font-size:13px;">暂无复盘摘要</div>';
 
@@ -1163,7 +1241,23 @@ const app = {
         const footer = document.getElementById('modal-footer');
         backdrop.classList.remove('hidden');
 
-        if (type === 'company') {
+        if (type === 'activity') {
+            title.textContent = '补全日志';
+            body.innerHTML = `<div class="form-group"><label>日志标题 *</label><input id="m-act-title" placeholder="例如：补充一次复盘记录"></div>
+                <div class="form-group"><label>日志详情</label><textarea id="m-act-detail" rows="3" placeholder="记录当时发生了什么"></textarea></div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                    <div class="form-group"><label>日志类型</label><select id="m-act-type">${['投递','面试','复盘','备注','其他'].map(t => `<option value="${t}">${t}</option>`).join('')}</select></div>
+                    <div class="form-group"><label>日期</label><input type="date" id="m-act-date" value="${new Date().toISOString().split('T')[0]}"></div>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                    <div class="form-group"><label>关联公司</label><select id="m-act-company"><option value="">不关联</option>${this.data.companies.map(c => `<option value="${this.escapeHTML(c.id)}">${this.escapeHTML(c.name)}</option>`).join('')}</select></div>
+                    <div class="form-group"><label>关联岗位</label><select id="m-act-job"><option value="">不关联</option>${this.data.positions.map(p => {
+                        const c = this.getCompany(p.companyId);
+                        return `<option value="${this.escapeHTML(p.id)}">${this.escapeHTML(c?.name || '未知公司')} · ${this.escapeHTML(p.title || '未知岗位')}</option>`;
+                    }).join('')}</select></div>
+                </div>`;
+            footer.innerHTML = '<div style="margin-left:auto;display:flex;gap:8px;"><button class="btn-secondary" data-action="closeModal">取消</button><button class="btn-primary" data-action="saveManualActivity">保存</button></div>';
+        } else if (type === 'company') {
             title.textContent = id ? '编辑公司' : '添加公司';
             const c = id ? this.data.companies.find(x => x.id === id) : {};
             body.innerHTML = `<input type="hidden" id="m-company-id" value="${this.escapeHTML(id || '')}">
@@ -1394,6 +1488,35 @@ const app = {
         this.backgroundSync();
     },
 
+    saveManualActivity() {
+        const title = document.getElementById('m-act-title').value.trim();
+        if (!title) return alert('请填写日志标题');
+        const jobId = document.getElementById('m-act-job').value;
+        const position = this.data.positions.find(p => p.id === jobId);
+        const date = document.getElementById('m-act-date').value || new Date().toISOString().split('T')[0];
+        DataStore.addManualActivity({
+            title,
+            detail: document.getElementById('m-act-detail').value.trim(),
+            type: document.getElementById('m-act-type').value,
+            companyId: document.getElementById('m-act-company').value || position?.companyId || '',
+            jobId,
+            createdAt: date,
+            date
+        });
+        this.data = DataStore.get();
+        this.closeModal();
+        this.render();
+        this.backgroundSync();
+    },
+
+    deleteActivity(id) {
+        if (!confirm('确定要永久删除这条活动记录吗？')) return;
+        DataStore.deleteActivity(id);
+        this.data = DataStore.get();
+        this.render();
+        this.backgroundSync();
+    },
+
     saveInterview() {
         const id = document.getElementById('m-iv-id').value;
         const posId = document.getElementById('m-iv-pos').value;
@@ -1494,9 +1617,9 @@ const app = {
                         <h4 style="font-size:14px;font-weight:700;">进度时间线</h4>
                         <button class="card-btn" onclick="event.stopPropagation();app.openInterviewModal('${safePositionId}')">+ 记面试</button>
                     </div>
-                    <div class="timeline">${acts.map(a => `<div class="timeline-item"><div class="timeline-dot"></div><div><span class="timeline-title">${this.escapeHTML(a.type)}</span><span class="timeline-date">${this.escapeHTML(a.date)}</span>${a.notes ? `<div class="timeline-note">${this.escapeHTML(a.notes)}</div>` : ''}</div></div>`).join('') || '<div style="color:#94a3b8;font-size:12px;">暂无记录</div>'}</div>
+                    <div class="timeline">${acts.map(a => `<div class="timeline-item"><div class="timeline-dot"></div><div><span class="timeline-title">${this.escapeHTML(a.title || a.type)}</span><span class="timeline-date">${this.escapeHTML(a.date || String(a.createdAt || '').split('T')[0])}</span>${a.detail || a.notes ? `<div class="timeline-note">${this.escapeHTML(a.detail || a.notes)}</div>` : ''}</div></div>`).join('') || '<div style="color:#94a3b8;font-size:12px;">暂无记录</div>'}</div>
                 </div>
-                <div class="panel"><h4 style="font-size:14px;font-weight:700;margin-bottom:8px;">岗位JD</h4><div style="font-size:13px;color:#475569;line-height:1.6;white-space:pre-wrap;">${this.escapeHTML(p.jd || '暂无')}</div></div>
+                <div class="panel"><h4 style="font-size:14px;font-weight:700;margin-bottom:8px;">岗位JD</h4>${this.renderMarkdown(p.jd || '暂无')}</div>
             </div>
             <div class="detail-sidebar">
                 <div class="panel"><h4 style="font-size:14px;font-weight:700;margin-bottom:12px;">公司信息</h4><div style="font-size:13px;color:#475569;"><div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span>行业</span><span>${this.escapeHTML(c?.industry||'-')}</span></div><div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span>规模</span><span>${this.escapeHTML(c?.scale||'-')}</span></div><div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span>官网</span><a href="${this.escapeHTML(website)}" target="_blank" rel="noopener noreferrer" style="color:#3b82f6;">${website !== '#' ? '链接' : '-'}</a></div>${c?.notes ? `<div style="margin-top:8px;padding-top:8px;border-top:1px solid #e2e8f0;font-size:12px;line-height:1.5;">${this.escapeHTML(c.notes)}</div>` : ''}</div></div>
@@ -1530,11 +1653,11 @@ const app = {
         const safePrepNote = this.escapeHTML(savedPrepNote);
         const reviewHtml = ivs.length ? `<h2>💡 往期复盘</h2>${ivs.slice(0,2).map(i => {
             const formatNote = i.formatNote || i.interviewFormatNote || '';
-            return `<div class="box" style="background:#fdf2f8;border-color:#fbcfe8;"><strong>${this.escapeHTML(i.round)} · ${this.escapeHTML(i.date)}${formatNote ? ` · ${this.escapeHTML(formatNote)}` : ''} · ${this.escapeHTML(i.mood)} · ${this.escapeHTML(i.selfRating)}星</strong>${this.renderQAPairsReadOnly(i)}<div style="white-space:pre-wrap;margin-top:8px;font-size:13px;">${this.escapeHTML(i.notes||'无笔记')}</div></div>`;
+            return `<div class="box" style="background:#fdf2f8;border-color:#fbcfe8;"><strong>${this.escapeHTML(i.round)} · ${this.escapeHTML(i.date)}${formatNote ? ` · ${this.escapeHTML(formatNote)}` : ''} · ${this.escapeHTML(i.mood)} · ${this.escapeHTML(i.selfRating)}星</strong>${this.renderQAPairsReadOnly(i)}${this.renderMarkdown(i.notes||'无笔记')}</div>`;
         }).join('')}` : '';
 
         const win = window.open('', '_blank');
-        win.document.write(`<html><head><title>面试准备包 - ${safeTitle}</title><style>body{font-family:-apple-system,sans-serif;max-width:800px;margin:40px auto;padding:0 20px;color:#1e293b;line-height:1.6;}h1{font-size:24px;border-bottom:2px solid #e2e8f0;padding-bottom:12px;}h2{font-size:16px;color:#3b82f6;margin-top:24px;}.box{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px;margin:12px 0;font-size:14px;}.box strong{color:#0f172a;}ul{margin:8px 0;padding-left:20px;}li{margin:4px 0;}.print-btn{position:fixed;top:20px;right:20px;padding:8px 16px;background:#3b82f6;color:white;border:none;border-radius:6px;cursor:pointer;}.prep-note-box{border-style:dashed;background:#fffdf7;}.prep-note-area{width:100%;min-height:140px;border:0;background:transparent;resize:vertical;font:inherit;color:#1e293b;line-height:1.6;outline:none;}.prep-note-status{font-size:12px;color:#64748b;margin-top:8px;}.qa-readonly-card{background:white;border:1px solid #e2e8f0;border-radius:8px;margin-top:8px;padding:10px;}.qa-readonly-question{font-weight:700;}.qa-readonly-answer{white-space:pre-wrap;margin-top:6px;color:#475569;}.qa-readonly-tags span{display:inline-block;background:#eef2ff;border-radius:999px;color:#4338ca;font-size:11px;margin:6px 4px 0 0;padding:2px 7px;}@media print{.print-btn,.prep-note-status{display:none;}.prep-note-area{border:0;resize:none;min-height:120px;overflow:visible;}}</style></head><body><button class="print-btn" onclick="window.print()">🖨️ 打印 / 存PDF</button><h1>${safeTitle}</h1><p style="color:#64748b;">生成于 ${this.escapeHTML(new Date().toLocaleDateString())}</p><div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;"><div class="box"><strong>公司信息</strong><br>行业：${this.escapeHTML(c?.industry||'-')}<br>规模：${this.escapeHTML(c?.scale||'-')}<br>地点：${this.escapeHTML(p.location||'-')}<br>薪资：${this.escapeHTML(p.salary||'-')}<br>${companyWebsite !== '#'?`官网：<a href="${this.escapeHTML(companyWebsite)}" rel="noopener noreferrer">${this.escapeHTML(companyWebsite)}</a><br>`:''}${c?.notes?`<div style="margin-top:8px;font-size:13px;">${this.escapeHTML(c.notes)}</div>`:''}</div><div class="box"><strong>岗位JD</strong><div style="white-space:pre-wrap;">${this.escapeHTML(p.jd||'暂无')}</div></div></div>${r?`<h2>📄 关联资料：${this.escapeHTML(r.name)}</h2><div class="box" style="background:#ecfdf5;border-color:#a7f3d0;"><div style="white-space:pre-wrap;font-size:13px;">${this.escapeHTML(r.content||'')}</div></div>`:''}${questions.length?`<h2>📝 历史高频问题</h2><div class="box"><ul>${questions.map(q=>`<li>${this.escapeHTML(q)}</li>`).join('')}</ul></div>`:''}${reviewHtml}<h2>✏️ 临时笔记区</h2><div class="box prep-note-box"><textarea id="prep-note-area" class="prep-note-area" placeholder="此处可补充临时知识点、追问清单或面试前提醒...">${safePrepNote}</textarea><div id="prep-note-status" class="prep-note-status">笔记会自动保存到本机</div></div><script>(function(){var key='${safePrepNoteKey}';var area=document.getElementById('prep-note-area');var status=document.getElementById('prep-note-status');var timer;function save(){localStorage.setItem(key,area.value);if(status)status.textContent='已自动保存 '+new Date().toLocaleTimeString();}area.addEventListener('input',function(){clearTimeout(timer);timer=setTimeout(save,250);});area.addEventListener('change',save);})();</script></body></html>`);
+        win.document.write(`<html><head><title>面试准备包 - ${safeTitle}</title><style>body{font-family:-apple-system,sans-serif;max-width:800px;margin:40px auto;padding:0 20px;color:#1e293b;line-height:1.6;}h1{font-size:24px;border-bottom:2px solid #e2e8f0;padding-bottom:12px;}h2{font-size:16px;color:#3b82f6;margin-top:24px;}.box{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px;margin:12px 0;font-size:14px;}.box strong{color:#0f172a;}ul{margin:8px 0;padding-left:20px;}li{margin:4px 0;}.print-btn{position:fixed;top:20px;right:20px;padding:8px 16px;background:#3b82f6;color:white;border:none;border-radius:6px;cursor:pointer;}.prep-note-box{border-style:dashed;background:#fffdf7;}.prep-note-area{width:100%;min-height:140px;border:0;background:transparent;resize:vertical;font:inherit;color:#1e293b;line-height:1.6;outline:none;}.prep-note-status{font-size:12px;color:#64748b;margin-top:8px;}.qa-readonly-card{background:white;border:1px solid #e2e8f0;border-radius:8px;margin-top:8px;padding:10px;}.qa-readonly-question{font-weight:700;}.qa-readonly-answer{margin-top:6px;color:#475569;}.qa-readonly-answer>span{font-weight:700;color:#1e293b;}.qa-readonly-tags span{display:inline-block;background:#eef2ff;border-radius:999px;color:#4338ca;font-size:11px;margin:6px 4px 0 0;padding:2px 7px;}.markdown-body{color:#475569;font-size:13px;line-height:1.7;}.markdown-body h1,.markdown-body h2,.markdown-body h3{color:#0f172a;margin:10px 0 6px;}.markdown-body h1{font-size:20px;}.markdown-body h2{font-size:17px;}.markdown-body h3{font-size:15px;}.markdown-body p{margin:8px 0;}.markdown-body ul,.markdown-body ol{margin:8px 0;padding-left:22px;}.markdown-body blockquote{background:#f8fafc;border-left:3px solid #93c5fd;border-radius:6px;margin:10px 0;padding:8px 12px;color:#475569;}@media print{.print-btn,.prep-note-status{display:none;}.prep-note-area{border:0;resize:none;min-height:120px;overflow:visible;}}</style></head><body><button class="print-btn" onclick="window.print()">🖨️ 打印 / 存PDF</button><h1>${safeTitle}</h1><p style="color:#64748b;">生成于 ${this.escapeHTML(new Date().toLocaleDateString())}</p><div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;"><div class="box"><strong>公司信息</strong><br>行业：${this.escapeHTML(c?.industry||'-')}<br>规模：${this.escapeHTML(c?.scale||'-')}<br>地点：${this.escapeHTML(p.location||'-')}<br>薪资：${this.escapeHTML(p.salary||'-')}<br>${companyWebsite !== '#'?`官网：<a href="${this.escapeHTML(companyWebsite)}" rel="noopener noreferrer">${this.escapeHTML(companyWebsite)}</a><br>`:''}${c?.notes?`<div style="margin-top:8px;font-size:13px;">${this.escapeHTML(c.notes)}</div>`:''}</div><div class="box"><strong>岗位JD</strong>${this.renderMarkdown(p.jd||'暂无')}</div></div>${r?`<h2>📄 关联资料：${this.escapeHTML(r.name)}</h2><div class="box" style="background:#ecfdf5;border-color:#a7f3d0;"><div style="white-space:pre-wrap;font-size:13px;">${this.escapeHTML(r.content||'')}</div></div>`:''}${questions.length?`<h2>📝 历史高频问题</h2><div class="box"><ul>${questions.map(q=>`<li>${this.escapeHTML(q)}</li>`).join('')}</ul></div>`:''}${reviewHtml}<h2>✏️ 临时笔记区</h2><div class="box prep-note-box"><textarea id="prep-note-area" class="prep-note-area" placeholder="此处可补充临时知识点、追问清单或面试前提醒...">${safePrepNote}</textarea><div id="prep-note-status" class="prep-note-status">笔记会自动保存到本机</div></div><script>(function(){var key='${safePrepNoteKey}';var area=document.getElementById('prep-note-area');var status=document.getElementById('prep-note-status');var timer;function save(){localStorage.setItem(key,area.value);if(status)status.textContent='已自动保存 '+new Date().toLocaleTimeString();}area.addEventListener('input',function(){clearTimeout(timer);timer=setTimeout(save,250);});area.addEventListener('change',save);})();</script></body></html>`);
         win.document.close();
     },
 

@@ -39,6 +39,7 @@ const DataStore = {
                 city: company.city || ''
             }))
             : [];
+        const positions = Array.isArray(safe.positions) ? safe.positions : [];
         const interviews = Array.isArray(safe.interviews)
             ? safe.interviews.map(interview => ({
                 ...interview,
@@ -46,15 +47,44 @@ const DataStore = {
                 formatNote: interview.formatNote || interview.interviewFormatNote || ''
             }))
             : [];
+        const activities = Array.isArray(safe.activities)
+            ? safe.activities.map((activity, index) => this.normalizeActivity(activity, index, positions, interviews))
+            : [];
         return {
             ...base,
             ...safe,
             companies,
-            positions: Array.isArray(safe.positions) ? safe.positions : [],
+            positions,
             resumes: Array.isArray(safe.resumes) ? safe.resumes : [],
             interviews,
-            activities: Array.isArray(safe.activities) ? safe.activities : [],
+            activities,
             config: { ...base.config, ...(safe.config || {}) }
+        };
+    },
+
+    normalizeActivity(activity = {}, index = 0, positions = [], interviews = []) {
+        const jobId = activity.jobId || activity.positionId || '';
+        const position = positions.find(p => p.id === jobId);
+        const interviewId = activity.interviewId || '';
+        const interview = interviews.find(i => i.id === interviewId);
+        const createdAt = activity.createdAt || activity.timestamp || activity.date || new Date().toISOString();
+        const type = activity.type || '其他';
+        const detail = activity.detail || activity.notes || '';
+        const stableId = `a_legacy_${index}_${String(jobId || activity.companyId || 'none').replace(/\W/g, '')}_${String(createdAt).replace(/\W/g, '')}_${String(type).replace(/\W/g, '')}`;
+        return {
+            ...activity,
+            id: activity.id || stableId,
+            type,
+            title: activity.title || type,
+            detail,
+            notes: activity.notes || detail,
+            companyId: activity.companyId || position?.companyId || '',
+            jobId,
+            positionId: jobId,
+            interviewId: interviewId || interview?.id || '',
+            date: activity.date || String(createdAt).split('T')[0],
+            createdAt,
+            manual: Boolean(activity.manual)
         };
     },
 
@@ -152,17 +182,37 @@ const DataStore = {
         interview.syncJobStatus = interview.syncJobStatus !== false;
         data.interviews.push(interview);
         const pos = data.positions.find(p => p.id === interview.positionId);
+        if (pos) {
+            this.addActivity({
+                type: '面试',
+                title: '新增面试记录',
+                detail: `${interview.round || '面试'} · ${interview.date || ''}`,
+                companyId: pos.companyId || '',
+                jobId: pos.id,
+                interviewId: interview.id,
+                createdAt: interview.createdAt,
+                manual: false
+            }, null, null, null, data);
+        }
         if (pos && !['Offer','拒绝','接受'].includes(pos.status)) {
             const map = { '笔试': '笔试', '一面': '一面', '二面': '二面', '三面': '三面', 'HR面': 'HR面' };
             const flow = ['未投递', '投递', '笔试', '一面', '二面', '三面', 'HR面', 'Offer', '接受'];
             const targetStatus = map[interview.round];
             const shouldAdvance = targetStatus && flow.indexOf(targetStatus) >= flow.indexOf(pos.status);
-            if (interview.syncJobStatus && shouldAdvance) {
+            if (interview.syncJobStatus && shouldAdvance && pos.status !== targetStatus) {
+                const oldStatus = pos.status;
                 pos.status = targetStatus;
                 pos.updatedAt = interview.createdAt;
-                this.addActivity(pos.id, pos.status, `${interview.round}完成`, interview.date, data);
-            } else {
-                this.addActivity(pos.id, interview.round || '面试', interview.syncJobStatus ? '记录面试（未改变主进度）' : '记录面试（未同步主进度）', interview.date, data);
+                this.addActivity({
+                    type: targetStatus,
+                    title: '岗位推进',
+                    detail: `${oldStatus} → ${targetStatus}`,
+                    companyId: pos.companyId || '',
+                    jobId: pos.id,
+                    interviewId: interview.id,
+                    createdAt: interview.date || interview.createdAt,
+                    manual: false
+                }, null, null, null, data);
             }
         }
         this.set(data);
@@ -189,9 +239,19 @@ const DataStore = {
             const targetStatus = map[next.round];
             const shouldAdvance = pos && targetStatus && flow.indexOf(targetStatus) >= flow.indexOf(pos.status);
             if (pos && next.syncJobStatus && shouldAdvance && !['Offer','拒绝','接受'].includes(pos.status) && pos.status !== targetStatus) {
+                const oldStatus = pos.status;
                 pos.status = targetStatus;
                 pos.updatedAt = now;
-                this.addActivity(pos.id, pos.status, `${next.round}完成`, next.date, data);
+                this.addActivity({
+                    type: targetStatus,
+                    title: '岗位推进',
+                    detail: `${oldStatus} → ${targetStatus}`,
+                    companyId: pos.companyId || '',
+                    jobId: pos.id,
+                    interviewId: next.id,
+                    createdAt: next.date || now,
+                    manual: false
+                }, null, null, null, data);
             }
             this.set(data);
         }
@@ -230,13 +290,32 @@ const DataStore = {
 
     addActivity(positionId, type, notes, date, currentData = null) {
         const data = currentData || this.get();
-        data.activities.push({
-            id: this.uid('a'),
-            positionId, type, notes, date,
-            createdAt: new Date().toISOString()
-        });
+        const activity = typeof positionId === 'object'
+            ? positionId
+            : { positionId, jobId: positionId, type, title: type, notes, detail: notes, date, createdAt: date || new Date().toISOString() };
+        data.activities.push(this.normalizeActivity({
+            ...activity,
+            id: activity.id || this.uid('a'),
+            createdAt: activity.createdAt || activity.date || new Date().toISOString()
+        }, data.activities.length, data.positions, data.interviews));
         if (data.activities.length > 100) data.activities = data.activities.slice(-100);
         if (!currentData) this.set(data);
+    },
+
+    addManualActivity(activity) {
+        const data = this.get();
+        this.addActivity({
+            ...activity,
+            manual: true,
+            createdAt: activity.createdAt || new Date().toISOString()
+        }, null, null, null, data);
+        this.set(data);
+    },
+
+    deleteActivity(id) {
+        const data = this.get();
+        data.activities = data.activities.filter(activity => activity.id !== id);
+        this.set(data);
     },
 
     getConfig() {
