@@ -1238,7 +1238,7 @@ body {
     cursor: pointer;
     padding: 15px 16px;
     gap: 8px;
-    background: #fff;
+    background: #fff; /* 箭头 1 指向这里 (公司卡片头部背景) */
     border: 0;
     border-radius: 0;
     box-shadow: none;
@@ -1438,7 +1438,7 @@ body {
     border-top: 0;
     margin: 0;
     padding: 12px 14px 14px;
-    background: #fbfdff;
+    background: #fff; /* 箭头 2 指向这里 (修改为 #fff 以和表头保持颜色一致) */
     border-radius: 0;
     box-shadow: inset 0 1px 0 #f1f5f9;
 }
