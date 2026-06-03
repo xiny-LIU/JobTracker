@@ -329,11 +329,14 @@ body {
     padding: 20px;
     cursor: pointer;
     transition: all 0.2s;
+    min-width: 0;
+    max-width: 100%;
+    container-type: inline-size;
 }
 .card:hover { box-shadow: var(--shadow-lg); transform: translateY(-2px); border-color: #cbd5e1; }
 
 .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
-.card-title { display: flex; align-items: center; gap: 10px; }
+.card-title { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .card-logo {
     width: 36px; height: 36px;
     background: var(--blue-light);
@@ -342,8 +345,8 @@ body {
     display: flex; align-items: center; justify-content: center;
     font-weight: 700; font-size: 14px;
 }
-.card-name { font-weight: 600; font-size: 14px; }
-.card-role { font-size: 12px; color: var(--text-secondary); }
+.card-name { font-weight: 600; font-size: 14px; overflow-wrap: anywhere; }
+.card-role { font-size: 12px; color: var(--text-secondary); overflow-wrap: anywhere; }
 .card-stars { display: flex; gap: 2px; margin-bottom: 10px; }
 .card-star { font-size: 12px; color: #e2e8f0; }
 .card-star.active { color: #fbbf24; }
@@ -362,36 +365,65 @@ body {
     justify-content: space-between;
     align-items: flex-start;
     flex-wrap: wrap;
-    gap: 8px 10px;
+    gap: 8px;
     padding-top: 12px;
     border-top: 1px solid var(--border);
+    width: 100%;
+    min-width: 0;
+    overflow: hidden;
 }
 .card-footer-text {
-    flex: 1 1 150px;
+    flex: 1 1 132px;
     min-width: 0;
     max-width: 100%;
     font-size: 12px;
     line-height: 1.45;
     color: var(--text-secondary);
+    overflow: hidden;
     overflow-wrap: anywhere;
+    word-break: break-word;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
 }
 .card-actions {
     display: flex;
-    gap: 6px;
-    flex: 0 0 auto;
+    gap: 4px;
+    flex: 0 1 auto;
     flex-wrap: wrap;
     justify-content: flex-end;
     margin-left: auto;
+    max-width: 100%;
+    min-width: 0;
 }
 .card-btn {
-    padding: 4px 8px;
+    padding: 4px 7px;
     border-radius: 4px;
     font-size: 11px;
     border: none; cursor: pointer;
     background: var(--bg); color: var(--text-secondary);
     transition: all 0.2s;
+    flex: 0 0 auto;
+    white-space: nowrap;
 }
 .card-btn:hover { background: var(--blue-light); color: var(--blue); }
+
+@container (max-width: 260px) {
+    .card-footer {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .card-footer-text {
+        flex-basis: auto;
+        width: 100%;
+    }
+
+    .card-actions {
+        width: 100%;
+        justify-content: flex-end;
+    }
+}
 
 /* Sidebar Layout */
 .layout-sidebar { display: grid; grid-template-columns: 200px 1fr; gap: 24px; }
@@ -1351,6 +1383,7 @@ body {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 12px;
+    min-width: 0;
 }
 
 .expanded-jobs-grid .card {
@@ -1360,6 +1393,8 @@ body {
     padding: 16px;
     background: white;
     box-shadow: var(--shadow);
+    min-width: 0;
+    overflow: hidden;
 }
 
 .expanded-jobs-grid .card-meta {
@@ -1369,12 +1404,16 @@ body {
 
 .expanded-jobs-grid .card-footer {
     margin-top: auto;
-    gap: 10px;
+    gap: 8px;
+    min-width: 0;
+    width: 100%;
 }
 
 .expanded-jobs-grid .card-actions {
     flex-wrap: wrap;
     justify-content: flex-end;
+    min-width: 0;
+    max-width: 100%;
 }
 
 .expanded-jobs-empty {
