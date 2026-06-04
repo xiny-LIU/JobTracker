@@ -886,26 +886,57 @@ body {
     border-radius: var(--radius-lg);
     min-width: 0;
     padding: 14px 16px;
+    position: relative;
+}
+
+.company-background-head {
+    align-items: center;
+    display: flex;
+    gap: 12px;
+    justify-content: space-between;
+    margin-bottom: 10px;
 }
 
 .company-background-section h3 {
     color: var(--text);
     font-size: 14px;
     font-weight: 800;
-    margin: 0 0 10px;
+    margin: 0;
 }
 
 .company-background-markdown {
     color: var(--text-secondary);
     font-size: 13px;
     line-height: 1.75;
-    max-height: 260px;
-    overflow: auto;
-    padding-right: 4px;
+    overflow: hidden;
+    position: relative;
 }
 
 .company-background-markdown .markdown-body {
     margin: 0;
+}
+
+.company-background-section.is-collapsed .company-background-markdown {
+    max-height: 260px;
+}
+
+.company-background-section.is-collapsed .company-background-markdown::after {
+    background: linear-gradient(180deg, rgba(243, 248, 255, 0), var(--child-card));
+    bottom: 0;
+    content: '';
+    height: 54px;
+    left: 0;
+    pointer-events: none;
+    position: absolute;
+    right: 0;
+}
+
+.company-background-section.is-expanded .company-background-markdown {
+    max-height: none;
+}
+
+.company-background-toggle {
+    flex-shrink: 0;
 }
 
 .detail-interviews {
@@ -2610,6 +2641,16 @@ body {
     .detail-interviews {
         border-radius: var(--radius-lg);
         padding: 14px;
+    }
+
+    .company-background-head {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .company-background-toggle {
+        justify-content: center;
+        width: 100%;
     }
 
     .detail-section-head {

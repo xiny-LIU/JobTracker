@@ -1693,7 +1693,6 @@ const app = {
                         <h4 class="detail-panel-title">岗位JD</h4>
                         ${this.renderMarkdown(p.jd || '暂无')}
                     </div>
-                    ${c?.background ? `<section class="company-background-section"><h3>公司背景</h3><div class="company-background-markdown">${this.renderMarkdown(c.background)}</div></section>` : ''}
                 </div>
                 <div class="detail-sidebar">
                     <div class="panel detail-panel">
@@ -1711,6 +1710,13 @@ const app = {
                     </div>
                 </div>
             </div>
+            ${c?.background ? `<section class="company-background-section is-collapsed">
+                <div class="company-background-head">
+                    <h3>公司背景</h3>
+                    <button type="button" class="card-btn company-background-toggle" onclick="event.stopPropagation();app.toggleCompanyBackground(this)">展开全文</button>
+                </div>
+                <div class="company-background-markdown">${this.renderMarkdown(c.background)}</div>
+            </section>` : ''}
             <section class="detail-interviews">
                 <div class="detail-section-head">
                     <div>
@@ -1728,6 +1734,14 @@ const app = {
     closeDetail() {
         document.getElementById('detail-backdrop').classList.add('hidden');
         this.currentDetail = null;
+    },
+
+    toggleCompanyBackground(btn) {
+        const section = btn.closest('.company-background-section');
+        if (!section) return;
+        const expanded = section.classList.toggle('is-expanded');
+        section.classList.toggle('is-collapsed', !expanded);
+        btn.textContent = expanded ? '收起' : '展开全文';
     },
 
     openPrepSheet() {
