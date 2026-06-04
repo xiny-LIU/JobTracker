@@ -7,6 +7,7 @@ const app = {
     renderedCompanyIds: [],
     companySortable: null,
     lastPositionFilterKey: '',
+    toastTimer: null,
 
     init() {
         this.data = DataStore.get();
@@ -26,10 +27,8 @@ const app = {
     },
 
     bindTabs() {
-        document.querySelectorAll('.tab-btn').forEach(btn => {
+        document.querySelectorAll('.tab-btn, .mobile-tab-btn').forEach(btn => {
             btn.addEventListener('click', () => {
-                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
                 this.switchView(btn.dataset.view);
             });
         });
@@ -49,7 +48,23 @@ const app = {
         this.expandedCompanyIds.clear();  // 重置展开状态
         document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
         document.getElementById(`view-${view}`).classList.add('active');
+        document.querySelectorAll('.tab-btn, .mobile-tab-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.view === view);
+        });
         this.render();
+    },
+
+    showToast(message, type = 'success', duration = 2600) {
+        const toast = document.getElementById('global-toast');
+        const messageEl = document.getElementById('global-toast-message');
+        if (!toast || !messageEl) return;
+
+        messageEl.textContent = message;
+        toast.className = `global-toast show ${type}`;
+        clearTimeout(this.toastTimer);
+        this.toastTimer = setTimeout(() => {
+            toast.classList.remove('show');
+        }, duration);
     },
 
     render() {
@@ -607,6 +622,7 @@ const app = {
             this.data = DataStore.get();
             this.renderPositions();
             this.backgroundSync();
+            this.showToast(`岗位已推进到${flow[idx + 1]}`);
         }
     },
 
@@ -1050,7 +1066,7 @@ const app = {
 
     async firebaseLogin() {
         if (!window.FirebaseStore) {
-            alert('Firebase SDK 还没有加载完成。请检查网络，或使用本地服务器方式打开页面。');
+            this.showToast('Firebase SDK 还没有加载完成', 'error');
             return;
         }
 
@@ -1058,7 +1074,7 @@ const app = {
             await window.FirebaseStore.signIn();
             this.renderSettings();
             this.updateSyncBadge();
-            alert('登录成功');
+            this.showToast('登录成功');
         } catch (e) {
             alert('登录失败：' + this.explainFirebaseError(e));
         }
@@ -1070,7 +1086,7 @@ const app = {
             await window.FirebaseStore.signOut();
             this.renderSettings();
             this.updateSyncBadge();
-            alert('已退出登录');
+            this.showToast('已退出登录', 'info');
         } catch (e) {
             alert('退出失败：' + this.explainFirebaseError(e));
         }
@@ -1081,7 +1097,7 @@ const app = {
         if (!window.FirebaseStore) {
             if (!silent) {
                 this.switchView('settings');
-                alert('Firebase SDK 还没有加载完成。请检查网络，或使用本地服务器方式打开页面。');
+                this.showToast('Firebase SDK 还没有加载完成', 'error');
             }
             return;
         }
@@ -1098,7 +1114,7 @@ const app = {
             this.data = DataStore.get();
             await window.FirebaseStore.upload(DataStore.normalize(this.data));
             this.updateSyncBadge();
-            if (!silent) alert('已上传到 Firebase 云端');
+            if (!silent) this.showToast('已上传到 Firebase 云端');
         } catch (e) {
             if (silent) {
                 console.error('Firebase 后台同步失败', e);
@@ -1133,7 +1149,7 @@ const app = {
                 this.data = DataStore.get();
                 this.render();
                 this.updateSyncBadge();
-                alert('已从 Firebase 云端拉取数据');
+                this.showToast('已从 Firebase 云端拉取数据');
             }
         } catch (e) {
             alert('拉取失败：' + this.explainFirebaseError(e));
@@ -1207,6 +1223,7 @@ const app = {
         a.download = `jobtracker_${new Date().toISOString().split('T')[0]}.json`;
         a.click();
         URL.revokeObjectURL(a.href);
+        this.showToast('JSON 备份已导出');
     },
 
     importJSON(input) {
@@ -1221,7 +1238,7 @@ const app = {
                     DataStore.set(data);
                     this.data = DataStore.get();
                     this.render();
-                    alert('导入成功');
+                    this.showToast('导入成功');
                 }
             } catch (err) {
                 alert('文件格式错误：请选择本项目导出的 JSON 备份文件');
@@ -1236,6 +1253,7 @@ const app = {
         DataStore.loadDemo();
         this.data = DataStore.get();
         this.render();
+        this.showToast('演示数据已加载');
     },
 
     clearAllData() {
@@ -1243,6 +1261,7 @@ const app = {
         DataStore.clear();
         this.data = DataStore.get();
         this.render();
+        this.showToast('所有数据已清空', 'warn');
     },
 
     openModal(type, id = null, presetCompanyId = '') {
@@ -1401,6 +1420,7 @@ const app = {
         this.closeModal();
         this.render();
         this.backgroundSync();
+        this.showToast(id ? '公司信息已保存' : '公司已新增');
     },
 
     deleteCompany() {
@@ -1416,6 +1436,7 @@ const app = {
         this.closeModal();
         this.render();
         this.backgroundSync();
+        this.showToast('公司已删除', 'warn');
     },
 
     savePosition() {
@@ -1432,6 +1453,7 @@ const app = {
         this.closeModal();
         this.render();
         this.backgroundSync();
+        this.showToast(id ? '岗位已保存' : '岗位已新增');
     },
 
     deletePosition() {
@@ -1442,6 +1464,7 @@ const app = {
         this.closeModal();
         this.render();
         this.backgroundSync();
+        this.showToast('岗位已删除', 'warn');
     },
 
     saveResume() {
@@ -1469,6 +1492,7 @@ const app = {
         this.closeModal();
         this.render();
         this.backgroundSync();
+        this.showToast(id ? '资料已保存' : '资料已新增');
     },
 
     handleFileSelect(event) {
@@ -1488,6 +1512,7 @@ const app = {
             document.getElementById('m-res-file').value = file.name;
             document.getElementById('m-res-file-data').value = fileData;
             document.getElementById('file-status').textContent = `✓ 已选择: ${file.name} (${(file.size / 1024).toFixed(2)}KB)`;
+            this.showToast('文件已选择', 'info');
         };
         reader.onerror = () => {
             alert('文件读取失败');
@@ -1503,6 +1528,7 @@ const app = {
         this.closeModal();
         this.render();
         this.backgroundSync();
+        this.showToast('资料已删除', 'warn');
     },
 
     saveManualActivity() {
@@ -1524,6 +1550,7 @@ const app = {
         this.closeModal();
         this.render();
         this.backgroundSync();
+        this.showToast('日志已保存');
     },
 
     deleteActivity(id) {
@@ -1532,6 +1559,7 @@ const app = {
         this.data = DataStore.get();
         this.render();
         this.backgroundSync();
+        this.showToast('活动记录已删除', 'warn');
     },
 
     saveInterview() {
@@ -1562,6 +1590,7 @@ const app = {
         if (!document.getElementById('detail-backdrop').classList.contains('hidden')) {
             this.openDetail(posId);
         }
+        this.showToast(id ? '面试记录已保存' : '面试记录已新增');
     },
 
     deleteInterview() {
@@ -1576,6 +1605,7 @@ const app = {
         if (!document.getElementById('detail-backdrop').classList.contains('hidden')) {
             this.openDetail(posId);
         }
+        this.showToast('面试记录已删除', 'warn');
     },
 
     openPositionModal(positionId = null, companyId = '') {

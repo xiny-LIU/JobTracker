@@ -7,6 +7,11 @@
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+    <div id="global-toast" class="global-toast" aria-live="polite">
+        <span class="global-toast-icon"></span>
+        <span id="global-toast-message">操作成功</span>
+    </div>
+
     <!-- 顶部导航 -->
     <nav class="navbar">
         <div class="nav-brand">
@@ -30,6 +35,29 @@
             </button>
             <span id="sync-status" class="sync-badge">本地</span>
         </div>
+    </nav>
+
+    <nav class="mobile-tabbar" aria-label="移动端主导航">
+        <button class="mobile-tab-btn active" data-view="dashboard">
+            <span class="mobile-tab-icon">⌂</span>
+            <span>仪表盘</span>
+        </button>
+        <button class="mobile-tab-btn" data-view="positions">
+            <span class="mobile-tab-icon">▦</span>
+            <span>进度</span>
+        </button>
+        <button class="mobile-tab-btn" data-view="resumes">
+            <span class="mobile-tab-icon">▤</span>
+            <span>资料</span>
+        </button>
+        <button class="mobile-tab-btn" data-view="analytics">
+            <span class="mobile-tab-icon">◫</span>
+            <span>洞察</span>
+        </button>
+        <button class="mobile-tab-btn" data-view="settings">
+            <span class="mobile-tab-icon">⚙</span>
+            <span>设置</span>
+        </button>
     </nav>
 
     <!-- 主内容区 -->
