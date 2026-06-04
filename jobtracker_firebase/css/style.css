@@ -880,6 +880,34 @@ body {
     font-size: 11px;
 }
 
+.company-background-section {
+    background: var(--child-card);
+    border: 1px solid var(--border-blue);
+    border-radius: var(--radius-lg);
+    min-width: 0;
+    padding: 14px 16px;
+}
+
+.company-background-section h3 {
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 800;
+    margin: 0 0 10px;
+}
+
+.company-background-markdown {
+    color: var(--text-secondary);
+    font-size: 13px;
+    line-height: 1.75;
+    max-height: 260px;
+    overflow: auto;
+    padding-right: 4px;
+}
+
+.company-background-markdown .markdown-body {
+    margin: 0;
+}
+
 .detail-interviews {
     background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
     border: 1px solid var(--border-soft);

@@ -357,7 +357,7 @@ const app = {
 
         let companies = this.getSortedCompanies();
         if (search) {
-            companies = companies.filter(c => (c.name + c.industry + c.scale + c.notes).toLowerCase().includes(search));
+            companies = companies.filter(c => (c.name + c.industry + c.scale + c.notes + (c.background || '')).toLowerCase().includes(search));
         }
 
         if (companies.length === 0) {
@@ -415,7 +415,7 @@ const app = {
         };
 
         const companies = this.getSortedCompanies().filter(company => {
-            const companyHaystack = `${company.name || ''}${company.industry || ''}${company.scale || ''}${company.city || ''}${company.notes || ''}`.toLowerCase();
+            const companyHaystack = `${company.name || ''}${company.industry || ''}${company.scale || ''}${company.city || ''}${company.notes || ''}${company.background || ''}`.toLowerCase();
             const companyMatched = search && companyHaystack.includes(search);
             const jobs = this.getCompanyJobs(company.id);
             const filteredJobs = filterJobs(jobs, companyMatched);
@@ -445,7 +445,7 @@ const app = {
                 const companyDomId = this.escapeHTML(c.id);
                 const isFirst = index === 0;
                 const isLast = index === companies.length - 1;
-                const companyHaystack = `${c.name || ''}${c.industry || ''}${c.scale || ''}${c.city || ''}${c.notes || ''}`.toLowerCase();
+                const companyHaystack = `${c.name || ''}${c.industry || ''}${c.scale || ''}${c.city || ''}${c.notes || ''}${c.background || ''}`.toLowerCase();
                 const companyMatched = search && companyHaystack.includes(search);
                 const companyJobs = filterJobs(allCompanyJobs, companyMatched);
                 const highestStatus = this.getCompanyHighestStatus(c);
@@ -1304,7 +1304,8 @@ const app = {
                 </div>
                 <div class="form-group"><label>城市</label><input id="m-c-city" value="${this.escapeHTML(c.city || '')}"></div>
                 <div class="form-group"><label>官网</label><input id="m-c-website" value="${this.escapeHTML(c.website || '')}"></div>
-                <div class="form-group"><label>备注</label><textarea id="m-c-notes" rows="3">${this.escapeHTML(c.notes || '')}</textarea></div>`;
+                <div class="form-group"><label>备注 / 简短描述</label><textarea id="m-c-notes" rows="2" placeholder="用于列表页展示的一句话备注，例如：注塑机制造世界龙头企业">${this.escapeHTML(c.notes || '')}</textarea></div>
+                <div class="form-group"><label>公司背景（支持 Markdown）</label><textarea id="m-c-background" rows="8" placeholder="可填写公司背景、业务介绍、行业地位、招聘信息等，支持 Markdown">${this.escapeHTML(c.background || '')}</textarea></div>`;
             footer.innerHTML = `${id?'<button class="btn-danger" data-action="deleteCompany">删除</button>':''}<div style="margin-left:auto;display:flex;gap:8px;"><button class="btn-secondary" data-action="closeModal">取消</button><button class="btn-primary" data-action="saveCompany">保存</button></div>`;
         } else if (type === 'position') {
             const p = id ? (this.data.positions.find(x => x.id === id) || {}) : {};
@@ -1413,7 +1414,15 @@ const app = {
         const id = document.getElementById('m-company-id').value;
         const name = document.getElementById('m-c-name').value.trim();
         if (!name) return alert('请输入公司名称');
-        const data = { name, industry: document.getElementById('m-c-industry').value.trim(), scale: document.getElementById('m-c-scale').value, city: document.getElementById('m-c-city').value.trim(), website: document.getElementById('m-c-website').value.trim(), notes: document.getElementById('m-c-notes').value.trim() };
+        const data = {
+            name,
+            industry: document.getElementById('m-c-industry').value.trim(),
+            scale: document.getElementById('m-c-scale').value,
+            city: document.getElementById('m-c-city').value.trim(),
+            website: document.getElementById('m-c-website').value.trim(),
+            notes: document.getElementById('m-c-notes').value.trim(),
+            background: document.getElementById('m-c-background').value.trim()
+        };
         if (id) DataStore.updateCompany(id, data);
         else DataStore.addCompany(data);
         this.data = DataStore.get();
@@ -1684,6 +1693,7 @@ const app = {
                         <h4 class="detail-panel-title">岗位JD</h4>
                         ${this.renderMarkdown(p.jd || '暂无')}
                     </div>
+                    ${c?.background ? `<section class="company-background-section"><h3>公司背景</h3><div class="company-background-markdown">${this.renderMarkdown(c.background)}</div></section>` : ''}
                 </div>
                 <div class="detail-sidebar">
                     <div class="panel detail-panel">
