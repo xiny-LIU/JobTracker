@@ -1652,8 +1652,6 @@ const app = {
                     </div>
                     <span class="interview-result-badge ${i.result==='通过'?'pass':i.result==='挂'?'fail':'pending'}">${this.escapeHTML(i.result || '待反馈')}</span>
                 </div>
-                ${this.renderQAPairsReadOnly(i, { limit: 4 })}
-                ${i.notes ? `<div class="interview-notes-preview">${this.renderMarkdown(i.notes)}</div>` : ''}
                 <div class="interview-record-footer">
                     <span>面试官：${this.escapeHTML(i.interviewer || '未知')}</span>
                     ${formatNote ? `<span>形式：${this.escapeHTML(formatNote)}</span>` : ''}
@@ -1661,30 +1659,57 @@ const app = {
                     <span>结果：${this.escapeHTML(i.result || '待反馈')}</span>
                     <span>评分：${this.escapeHTML(i.selfRating || '-')}/5</span>
                 </div>
+                ${this.renderQAPairsReadOnly(i)}
+                ${i.notes ? `<div class="interview-notes-preview">${this.renderMarkdown(i.notes)}</div>` : ''}
             </div>`;
         }).join('') || '<div class="interview-empty-state"><strong>暂无面试记录</strong><span>点击“记”或“新增面试”记录你的第一次面试复盘</span></div>';
         document.getElementById('detail-body').innerHTML = `
-            <div class="detail-main">
-                <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">
-                    <span class="activity-badge badge-${badgeClass}">${this.escapeHTML(p.status)}</span>
-                    <span class="activity-badge badge-投递">${this.escapeHTML(p.location || '未知地点')}</span>
-                    <span class="activity-badge badge-投递">${this.escapeHTML(p.salary || '薪资面议')}</span>
-                    <span style="color:#fbbf24;font-size:14px;">${stars}</span>
-                </div>
-                <div class="panel" style="margin-bottom:20px;">
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-                        <h4 style="font-size:14px;font-weight:700;">进度时间线</h4>
-                        <button class="card-btn" onclick="event.stopPropagation();app.openInterviewModal('${safePositionId}')">+ 记面试</button>
+            <div class="detail-overview">
+                <div class="detail-main">
+                    <div class="detail-status-row">
+                        <span class="activity-badge badge-${badgeClass}">${this.escapeHTML(p.status)}</span>
+                        <span class="activity-badge badge-投递">${this.escapeHTML(p.location || '未知地点')}</span>
+                        <span class="activity-badge badge-投递">${this.escapeHTML(p.salary || '薪资面议')}</span>
+                        <span class="detail-stars">${stars}</span>
                     </div>
-                    <div class="timeline">${acts.map(a => `<div class="timeline-item"><div class="timeline-dot"></div><div><span class="timeline-title">${this.escapeHTML(a.title || a.type)}</span><span class="timeline-date">${this.escapeHTML(a.date || String(a.createdAt || '').split('T')[0])}</span>${a.detail || a.notes ? `<div class="timeline-note">${this.escapeHTML(a.detail || a.notes)}</div>` : ''}</div></div>`).join('') || '<div style="color:#94a3b8;font-size:12px;">暂无记录</div>'}</div>
+                    <div class="panel detail-panel">
+                        <div class="detail-panel-head">
+                            <h4 class="detail-panel-title">进度时间线</h4>
+                            <button class="card-btn" onclick="event.stopPropagation();app.openInterviewModal('${safePositionId}')">+ 记面试</button>
+                        </div>
+                        <div class="timeline">${acts.map(a => `<div class="timeline-item"><div class="timeline-dot"></div><div><span class="timeline-title">${this.escapeHTML(a.title || a.type)}</span><span class="timeline-date">${this.escapeHTML(a.date || String(a.createdAt || '').split('T')[0])}</span>${a.detail || a.notes ? `<div class="timeline-note">${this.escapeHTML(a.detail || a.notes)}</div>` : ''}</div></div>`).join('') || '<div class="detail-empty-line">暂无记录</div>'}</div>
+                    </div>
+                    <div class="panel detail-panel">
+                        <h4 class="detail-panel-title">岗位JD</h4>
+                        ${this.renderMarkdown(p.jd || '暂无')}
+                    </div>
                 </div>
-                <div class="panel"><h4 style="font-size:14px;font-weight:700;margin-bottom:8px;">岗位JD</h4>${this.renderMarkdown(p.jd || '暂无')}</div>
+                <div class="detail-sidebar">
+                    <div class="panel detail-panel">
+                        <h4 class="detail-panel-title">公司信息</h4>
+                        <div class="detail-meta-list">
+                            <div class="detail-meta-row"><span>行业</span><strong>${this.escapeHTML(c?.industry||'-')}</strong></div>
+                            <div class="detail-meta-row"><span>规模</span><strong>${this.escapeHTML(c?.scale||'-')}</strong></div>
+                            <div class="detail-meta-row"><span>官网</span><a href="${this.escapeHTML(website)}" target="_blank" rel="noopener noreferrer">${website !== '#' ? '链接' : '-'}</a></div>
+                            ${c?.notes ? `<div class="detail-company-note">${this.escapeHTML(c.notes)}</div>` : ''}
+                        </div>
+                    </div>
+                    <div class="panel detail-panel">
+                        <h4 class="detail-panel-title">关联资料</h4>
+                        ${r ? `<div class="detail-resource-card"><div class="detail-resource-main"><span class="detail-resource-icon">📄</span><div><div class="detail-resource-name">${this.escapeHTML(r.name)}</div><div class="detail-resource-version">${this.escapeHTML(r.version||'')}</div></div></div>${r.fileData ? `<div class="detail-resource-actions"><button class="card-btn" onclick="event.stopPropagation();app.previewFile('${this.inlineArg(r.id)}')">👁️</button><button class="card-btn" onclick="event.stopPropagation();app.downloadFile('${this.inlineArg(r.id)}', '${this.escapeJSString(r.fileName || '文件')}')">⬇️</button></div>` : ''}</div>` : '<div class="detail-empty-line">未关联</div>'}
+                    </div>
+                </div>
             </div>
-            <div class="detail-sidebar">
-                <div class="panel"><h4 style="font-size:14px;font-weight:700;margin-bottom:12px;">公司信息</h4><div style="font-size:13px;color:#475569;"><div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span>行业</span><span>${this.escapeHTML(c?.industry||'-')}</span></div><div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span>规模</span><span>${this.escapeHTML(c?.scale||'-')}</span></div><div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span>官网</span><a href="${this.escapeHTML(website)}" target="_blank" rel="noopener noreferrer" style="color:#3b82f6;">${website !== '#' ? '链接' : '-'}</a></div>${c?.notes ? `<div style="margin-top:8px;padding-top:8px;border-top:1px solid #e2e8f0;font-size:12px;line-height:1.5;">${this.escapeHTML(c.notes)}</div>` : ''}</div></div>
-                <div class="panel"><h4 style="font-size:14px;font-weight:700;margin-bottom:12px;">关联资料</h4>${r ? `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px;background:#f8fafc;border-radius:6px;"><div style="display:flex;align-items:center;gap:8px;flex:1;"><span style="font-size:20px;">📄</span><div><div style="font-size:13px;font-weight:600;">${this.escapeHTML(r.name)}</div><div style="font-size:11px;color:#64748b;">${this.escapeHTML(r.version||'')}</div></div></div>${r.fileData ? `<div style="display:flex;gap:4px;"><button class="card-btn" onclick="event.stopPropagation();app.previewFile('${this.inlineArg(r.id)}')">👁️</button><button class="card-btn" onclick="event.stopPropagation();app.downloadFile('${this.inlineArg(r.id)}', '${this.escapeJSString(r.fileName || '文件')}')">⬇️</button></div>` : ''}</div>` : '<div style="font-size:13px;color:#94a3b8;">未关联</div>'}</div>
-                <div class="panel"><h4 style="font-size:14px;font-weight:700;margin-bottom:12px;">面试记录</h4>${interviewDetailHtml}</div>
-            </div>
+            <section class="detail-interviews">
+                <div class="detail-section-head">
+                    <div>
+                        <h4 class="detail-section-title">面试记录</h4>
+                        <p>长文本复盘、真实问答和优化答案会在这里全宽展示，阅读更完整。</p>
+                    </div>
+                    <button class="btn-primary" onclick="event.stopPropagation();app.openInterviewModal('${safePositionId}')">新增面试</button>
+                </div>
+                <div class="interview-record-list">${interviewDetailHtml}</div>
+            </section>
         `;
         document.getElementById('detail-backdrop').classList.remove('hidden');
     },
