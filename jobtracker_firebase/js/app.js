@@ -161,6 +161,22 @@ const app = {
         return `<div class="markdown-body">${html.join('')}</div>`;
     },
 
+    getMarkdownSummary(text, maxLength = 90) {
+        const plain = String(text || '')
+            .replace(/\r\n/g, '\n')
+            .replace(/^#{1,6}\s+/gm, '')
+            .replace(/^>\s?/gm, '')
+            .replace(/^\s*[-*]\s+/gm, '')
+            .replace(/^\s*\d+\.\s+/gm, '')
+            .replace(/\*\*(.*?)\*\*/g, '$1')
+            .replace(/[`*_~]/g, '')
+            .replace(/\[(.*?)\]\((.*?)\)/g, '$1')
+            .replace(/\s+/g, ' ')
+            .trim();
+        if (!plain) return '无内容';
+        return plain.length > maxLength ? `${plain.slice(0, maxLength)}...` : plain;
+    },
+
     escapeJSString(value) {
         return String(value ?? '')
             .replace(/\\/g, '\\\\')
@@ -635,7 +651,8 @@ const app = {
             const linked = this.data.positions.filter(p => p.resumeId === r.id).length;
             const resumeId = this.inlineArg(r.id);
             const fileDownloadBtn = r.fileData ? `<button class="card-btn" onclick="app.downloadFile('${resumeId}', '${this.escapeJSString(r.fileName || '文件')}')">⬇️ 下载</button>` : '';
-            const filePreviewBtn = r.fileData ? `<button class="card-btn" onclick="app.previewFile('${resumeId}')">👁️ 预览</button>` : '';
+            const filePreviewBtn = (r.content || r.fileData) ? `<button class="card-btn" onclick="app.openResumePreview('${resumeId}')">👁️ 预览</button>` : '';
+            const summary = this.getMarkdownSummary(r.content);
             return `<div class="resume-card">
                 <div class="resume-header">
                     <div style="display:flex;gap:10px;align-items:center;">
@@ -645,7 +662,7 @@ const app = {
                     <button class="btn-icon" onclick="app.editResume('${resumeId}')">✏️</button>
                 </div>
                 ${r.version ? `<div class="resume-version">${this.escapeHTML(r.version)}</div>` : ''}
-                <div class="resume-content">${this.escapeHTML(r.content || '无内容')}</div>
+                <div class="resume-content">${this.escapeHTML(summary)}</div>
                 <div class="resume-footer"><span>${linked} 个岗位关联</span>${r.fileName ? `<span>📎 ${this.escapeHTML(r.fileName)}</span>` : ''}</div>
                 <div style="display:flex;gap:6px;">${filePreviewBtn}${fileDownloadBtn}</div>
             </div>`;
@@ -657,42 +674,52 @@ const app = {
     },
 
     previewFile(resumeId) {
+        this.openResumePreview(resumeId);
+    },
+
+    openResumePreview(resumeId) {
         const resume = this.data.resumes.find(r => r.id === resumeId);
-        if (!resume || !resume.fileData) {
-            alert('文件不存在或已损坏');
+        if (!resume) {
+            alert('资料不存在');
             return;
         }
 
-        const fileName = resume.fileName || '文件';
-        const ext = fileName.substring(fileName.lastIndexOf('.') + 1).toLowerCase();
-        
-        // 支持直接预览的文件类型
-        if (['pdf', 'jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) {
-            const win = window.open();
-            win.document.write(`
-                <html>
-                <head>
-                    <title>${this.escapeHTML(fileName)}</title>
-                    <style>
-                        body { margin: 0; padding: 0; background: #f0f0f0; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
-                        img { max-width: 100%; max-height: 100vh; }
-                        embed { width: 100%; height: 100vh; }
-                    </style>
-                </head>
-                <body>
-            `);
-            
-            if (ext === 'pdf') {
-                win.document.write(`<embed src="${resume.fileData}" type="application/pdf" /></body></html>`);
-            } else {
-                win.document.write(`<img src="${resume.fileData}" /></body></html>`);
-            }
-            win.document.close();
-            return;
+        const backdrop = document.getElementById('resume-preview-backdrop');
+        const title = document.getElementById('resume-preview-title');
+        const meta = document.getElementById('resume-preview-meta');
+        const body = document.getElementById('resume-preview-body');
+        const footer = document.getElementById('resume-preview-footer');
+        if (!backdrop || !title || !meta || !body || !footer) return;
+
+        const fileName = resume.fileName || '';
+        const ext = fileName.includes('.') ? fileName.substring(fileName.lastIndexOf('.') + 1).toLowerCase() : '';
+        const typeLabel = resume.type === 'resume' ? '简历' : resume.type === 'intro' ? '自我介绍' : resume.type === 'cover' ? '求职信' : '其他';
+        title.textContent = resume.name || '资料预览';
+        meta.textContent = [typeLabel, resume.target || '通用', resume.version, fileName].filter(Boolean).join(' · ');
+
+        let previewHtml = '';
+        if (resume.content) {
+            previewHtml = `<div class="resume-preview-markdown">${this.renderMarkdown(resume.content)}</div>`;
+        } else if (resume.fileText && ['md', 'markdown', 'txt'].includes(ext)) {
+            previewHtml = `<div class="resume-preview-markdown">${this.renderMarkdown(resume.fileText)}</div>`;
+        } else if (resume.fileData && ext === 'pdf') {
+            previewHtml = `<embed class="resume-preview-embed" src="${resume.fileData}" type="application/pdf">`;
+        } else if (resume.fileData && ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) {
+            previewHtml = `<img class="resume-preview-image" src="${resume.fileData}" alt="${this.escapeHTML(fileName || resume.name || '资料图片')}">`;
+        } else {
+            previewHtml = `<div class="resume-preview-empty"><strong>暂不支持在线预览</strong><p>${this.escapeHTML(fileName || '当前资料')} 可以下载后查看。</p></div>`;
         }
-        
-        // 其他文件类型无法预览，提示用户下载
-        alert(`不支持在线预览 ${ext.toUpperCase()} 文件，请下载后使用相应软件打开`);
+        body.innerHTML = previewHtml;
+
+        const resumeArg = this.inlineArg(resume.id);
+        const downloadBtn = resume.fileData ? `<button class="btn-secondary" onclick="app.downloadFile('${resumeArg}', '${this.escapeJSString(fileName || '文件')}')">下载文件</button>` : '';
+        footer.innerHTML = `${downloadBtn}<button class="btn-secondary" onclick="app.closeResumePreview();app.editResume('${resumeArg}')">编辑资料</button><button class="btn-primary" onclick="app.closeResumePreview()">关闭</button>`;
+        backdrop.classList.remove('hidden');
+    },
+
+    closeResumePreview() {
+        const backdrop = document.getElementById('resume-preview-backdrop');
+        if (backdrop) backdrop.classList.add('hidden');
     },
 
     downloadFile(resumeId, fileName) {
@@ -1341,14 +1368,24 @@ const app = {
                     <div class="form-group"><label>目标岗位</label><input id="m-res-target" value="${this.escapeHTML(r.target || '')}"></div>
                 </div>
                 <div class="form-group"><label>版本说明</label><input id="m-res-version" value="${this.escapeHTML(r.version || '')}"></div>
-                <div class="form-group"><label>内容</label><textarea id="m-res-content" rows="6">${this.escapeHTML(r.content || '')}</textarea></div>
+                <div class="form-group"><label>内容</label>
+                    <div class="markdown-editor">
+                        <div class="markdown-editor-tabs">
+                            <button type="button" class="markdown-tab active" data-mode="edit" onclick="app.toggleResumeMarkdownMode('edit')">编辑</button>
+                            <button type="button" class="markdown-tab" data-mode="preview" onclick="app.toggleResumeMarkdownMode('preview')">预览</button>
+                        </div>
+                        <textarea id="m-res-content" class="markdown-source" rows="10" oninput="app.updateResumeMarkdownPreview()">${this.escapeHTML(r.content || '')}</textarea>
+                        <div id="m-res-content-preview" class="markdown-preview hidden"></div>
+                    </div>
+                </div>
                 <div class="form-group">
                     <label>上传文件（PDF、Word、图片等）</label>
-                    <input type="file" id="m-res-file-input" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif,.txt,.xlsx,.xls" onchange="app.handleFileSelect(event)">
+                    <input type="file" id="m-res-file-input" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif,.webp,.txt,.md,.markdown,.xlsx,.xls" onchange="app.handleFileSelect(event)">
                     <div id="file-status" style="font-size:12px;color:#64748b;margin-top:4px;">${fileStatusDisplay}</div>
                 </div>
                 <input type="hidden" id="m-res-file" value="${this.escapeHTML(r.fileName || '')}">
-                <input type="hidden" id="m-res-file-data" value="">`;
+                <input type="hidden" id="m-res-file-data" value="">
+                <input type="hidden" id="m-res-file-text" value="${this.escapeHTML(r.fileText || '')}">`;
             footer.innerHTML = `${id?'<button class="btn-danger" data-action="deleteResume">删除</button>':''}<div style="margin-left:auto;display:flex;gap:8px;"><button class="btn-secondary" data-action="closeModal">取消</button><button class="btn-primary" data-action="saveResume">保存</button></div>`;
         } else if (type === 'interview') {
             const posId = id;
@@ -1476,12 +1513,39 @@ const app = {
         this.showToast('岗位已删除', 'warn');
     },
 
+    toggleResumeMarkdownMode(mode) {
+        const source = document.getElementById('m-res-content');
+        const preview = document.getElementById('m-res-content-preview');
+        if (!source || !preview) return;
+
+        document.querySelectorAll('.markdown-tab').forEach(tab => {
+            tab.classList.toggle('active', tab.dataset.mode === mode);
+        });
+
+        if (mode === 'preview') {
+            preview.innerHTML = this.renderMarkdown(source.value);
+            source.classList.add('hidden');
+            preview.classList.remove('hidden');
+        } else {
+            source.classList.remove('hidden');
+            preview.classList.add('hidden');
+        }
+    },
+
+    updateResumeMarkdownPreview() {
+        const preview = document.getElementById('m-res-content-preview');
+        const source = document.getElementById('m-res-content');
+        if (!preview || !source || preview.classList.contains('hidden')) return;
+        preview.innerHTML = this.renderMarkdown(source.value);
+    },
+
     saveResume() {
         const id = document.getElementById('m-res-id').value;
         const name = document.getElementById('m-res-name').value.trim();
         if (!name) return alert('请输入资料名称');
         
         const newFileData = document.getElementById('m-res-file-data').value;
+        const newFileText = document.getElementById('m-res-file-text')?.value || '';
         const existingResume = id ? this.data.resumes.find(r => r.id === id) : null;
         
         const data = { 
@@ -1492,7 +1556,8 @@ const app = {
             content: document.getElementById('m-res-content').value.trim(), 
             fileName: document.getElementById('m-res-file').value.trim(),
             // 如果有新文件数据就用新的，否则保留原有的
-            fileData: newFileData || (existingResume?.fileData || '')
+            fileData: newFileData || (existingResume?.fileData || ''),
+            fileText: newFileText || (existingResume?.fileText || '')
         };
         
         if (id) DataStore.updateResume(id, data);
@@ -1515,13 +1580,45 @@ const app = {
             return;
         }
         
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const fileData = e.target.result;
+        const fileExt = file.name.includes('.') ? file.name.substring(file.name.lastIndexOf('.') + 1).toLowerCase() : '';
+        const isTextFile = ['md', 'markdown', 'txt'].includes(fileExt);
+        const setFileData = (fileData, fileText = '') => {
             document.getElementById('m-res-file').value = file.name;
             document.getElementById('m-res-file-data').value = fileData;
+            const fileTextInput = document.getElementById('m-res-file-text');
+            if (fileTextInput) fileTextInput.value = fileText;
             document.getElementById('file-status').textContent = `✓ 已选择: ${file.name} (${(file.size / 1024).toFixed(2)}KB)`;
             this.showToast('文件已选择', 'info');
+        };
+
+        if (isTextFile) {
+            const textReader = new FileReader();
+            textReader.onload = (e) => {
+                const fileText = e.target.result || '';
+                const contentEl = document.getElementById('m-res-content');
+                if (contentEl) {
+                    const shouldReplace = !contentEl.value.trim() || confirm('是否用上传的文本内容替换当前资料内容？');
+                    if (shouldReplace) {
+                        contentEl.value = fileText;
+                        this.updateResumeMarkdownPreview();
+                    }
+                }
+
+                const dataReader = new FileReader();
+                dataReader.onload = (dataEvent) => setFileData(dataEvent.target.result, fileText);
+                dataReader.onerror = () => alert('文件读取失败');
+                dataReader.readAsDataURL(file);
+            };
+            textReader.onerror = () => {
+                alert('文件读取失败');
+            };
+            textReader.readAsText(file);
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            setFileData(e.target.result);
         };
         reader.onerror = () => {
             alert('文件读取失败');
@@ -1706,7 +1803,7 @@ const app = {
                     </div>
                     <div class="panel detail-panel">
                         <h4 class="detail-panel-title">关联资料</h4>
-                        ${r ? `<div class="detail-resource-card"><div class="detail-resource-main"><span class="detail-resource-icon">📄</span><div><div class="detail-resource-name">${this.escapeHTML(r.name)}</div><div class="detail-resource-version">${this.escapeHTML(r.version||'')}</div></div></div>${r.fileData ? `<div class="detail-resource-actions"><button class="card-btn" onclick="event.stopPropagation();app.previewFile('${this.inlineArg(r.id)}')">👁️</button><button class="card-btn" onclick="event.stopPropagation();app.downloadFile('${this.inlineArg(r.id)}', '${this.escapeJSString(r.fileName || '文件')}')">⬇️</button></div>` : ''}</div>` : '<div class="detail-empty-line">未关联</div>'}
+                        ${r ? `<div class="detail-resource-card"><div class="detail-resource-main"><span class="detail-resource-icon">📄</span><div><div class="detail-resource-name">${this.escapeHTML(r.name)}</div><div class="detail-resource-version">${this.escapeHTML(r.version||'')}</div></div></div>${(r.content || r.fileData) ? `<div class="detail-resource-actions"><button class="card-btn" onclick="event.stopPropagation();app.openResumePreview('${this.inlineArg(r.id)}')">👁️</button>${r.fileData ? `<button class="card-btn" onclick="event.stopPropagation();app.downloadFile('${this.inlineArg(r.id)}', '${this.escapeJSString(r.fileName || '文件')}')">⬇️</button>` : ''}</div>` : ''}</div>` : '<div class="detail-empty-line">未关联</div>'}
                     </div>
                 </div>
             </div>

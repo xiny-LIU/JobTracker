@@ -258,6 +258,21 @@
         </div>
     </div>
 
+    <!-- 资料预览弹窗 -->
+    <div class="modal-backdrop hidden" id="resume-preview-backdrop" onclick="app.closeResumePreview()">
+        <div class="modal resume-preview-modal" onclick="event.stopPropagation()">
+            <div class="modal-header resume-preview-header">
+                <div>
+                    <h3 id="resume-preview-title">资料预览</h3>
+                    <p id="resume-preview-meta" class="resume-preview-meta"></p>
+                </div>
+                <button class="btn-close" onclick="app.closeResumePreview()">&times;</button>
+            </div>
+            <div class="modal-body resume-preview-body" id="resume-preview-body"></div>
+            <div class="modal-footer resume-preview-footer" id="resume-preview-footer"></div>
+        </div>
+    </div>
+
     <!-- 详情页弹窗 -->
     <div class="modal-backdrop hidden" id="detail-backdrop" onclick="app.closeDetail()">
         <div class="modal modal-lg" onclick="event.stopPropagation()">
