@@ -689,23 +689,30 @@ const app = {
         const meta = document.getElementById('resume-preview-meta');
         const body = document.getElementById('resume-preview-body');
         const footer = document.getElementById('resume-preview-footer');
-        if (!backdrop || !title || !meta || !body || !footer) return;
+        const modal = backdrop?.querySelector('.resume-preview-modal');
+        if (!backdrop || !title || !meta || !body || !footer || !modal) return;
 
         const fileName = resume.fileName || '';
         const ext = fileName.includes('.') ? fileName.substring(fileName.lastIndexOf('.') + 1).toLowerCase() : '';
+        const isPdf = /\.pdf$/i.test(fileName);
+        const isImage = /\.(png|jpe?g|gif|webp)$/i.test(fileName);
+        const isMarkdown = !!resume.content || /\.(md|markdown|txt)$/i.test(fileName);
         const typeLabel = resume.type === 'resume' ? '简历' : resume.type === 'intro' ? '自我介绍' : resume.type === 'cover' ? '求职信' : '其他';
         title.textContent = resume.name || '资料预览';
         meta.textContent = [typeLabel, resume.target || '通用', resume.version, fileName].filter(Boolean).join(' · ');
+        modal.classList.toggle('pdf-mode', isPdf);
+        modal.classList.toggle('image-mode', isImage);
+        modal.classList.toggle('markdown-mode', isMarkdown && !isPdf && !isImage);
 
         let previewHtml = '';
-        if (resume.content) {
-            previewHtml = `<div class="resume-preview-markdown">${this.renderMarkdown(resume.content)}</div>`;
-        } else if (resume.fileText && ['md', 'markdown', 'txt'].includes(ext)) {
-            previewHtml = `<div class="resume-preview-markdown">${this.renderMarkdown(resume.fileText)}</div>`;
-        } else if (resume.fileData && ext === 'pdf') {
+        if (resume.fileData && ext === 'pdf') {
             previewHtml = `<embed class="resume-preview-embed" src="${resume.fileData}" type="application/pdf">`;
         } else if (resume.fileData && ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) {
             previewHtml = `<img class="resume-preview-image" src="${resume.fileData}" alt="${this.escapeHTML(fileName || resume.name || '资料图片')}">`;
+        } else if (resume.content) {
+            previewHtml = `<div class="resume-preview-markdown">${this.renderMarkdown(resume.content)}</div>`;
+        } else if (resume.fileText && ['md', 'markdown', 'txt'].includes(ext)) {
+            previewHtml = `<div class="resume-preview-markdown">${this.renderMarkdown(resume.fileText)}</div>`;
         } else {
             previewHtml = `<div class="resume-preview-empty"><strong>暂不支持在线预览</strong><p>${this.escapeHTML(fileName || '当前资料')} 可以下载后查看。</p></div>`;
         }
