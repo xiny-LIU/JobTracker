@@ -1,0 +1,2443 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JobTracker - 皇家蓝求职作战指挥部</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    borderRadius: {
+                        '2xl': '1rem',
+                        '3xl': '1.5rem',
+                    },
+                    colors: {
+                        brand: {
+                            50: '#eff6ff',
+                            100: '#dbeafe',
+                            200: '#bfdbfe',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                        }
+                    },
+                    boxShadow: {
+                        'premium': '0 10px 30px -10px rgba(37, 99, 235, 0.08)',
+                        'hover-glow': '0 20px 40px -15px rgba(37, 99, 235, 0.15)'
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- SortableJS for drag-and-drop ordering -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* Custom scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #93c5fd;
+            border-radius: 99px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #2563eb;
+        }
+        .sortable-ghost {
+            opacity: 0.4;
+            border: 2px dashed #2563eb !important;
+            background-color: #eff6ff !important;
+        }
+        /* Custom animated toast state */
+        .toast-active {
+            transform: translate(-50%, 24px) scale(1) !important;
+            opacity: 1 !important;
+        }
+    </style>
+</head>
+<body class="bg-[#f0f4f8] text-slate-800 font-sans antialiased selection:bg-brand-100 selection:text-brand-700">
+
+    <!-- Global Floating Toast Notification -->
+    <div id="global-toast" class="fixed top-0 left-1/2 -translate-x-1/2 translate-y-[-100%] scale-90 opacity-0 bg-slate-900 text-white text-xs font-semibold px-5 py-3 rounded-full shadow-2xl z-[100] transition-all duration-300 flex items-center gap-2.5 pointer-events-none">
+        <i data-lucide="bell" class="w-4 h-4 text-brand-200"></i>
+        <span id="toast-message">欢迎来到全新皇家蓝控制终端</span>
+    </div>
+
+    <!-- App Container -->
+    <div class="flex min-h-screen flex-col md:flex-row">
+        
+        <!-- Desktop Sidebar -->
+        <aside class="hidden md:flex flex-col w-64 bg-white border-r border-slate-100 p-6 shrink-0 justify-between shadow-premium">
+            <div class="space-y-6">
+                <!-- Brand Logo -->
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center text-white font-black text-xl shadow-lg shadow-brand-500/30">J</div>
+                    <div>
+                        <h1 class="font-bold text-slate-900 leading-none tracking-tight">JobTracker</h1>
+                        <span class="text-xs text-brand-600 font-bold mt-1 block">求职作战指挥部</span>
+                    </div>
+                </div>
+
+                <!-- Navigation Menu -->
+                <nav class="space-y-1">
+                    <button class="nav-tab-btn flex items-center gap-3 w-full px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 text-brand-600 bg-brand-50" data-view="dashboard">
+                        <i data-lucide="layout-dashboard" class="w-4 h-4"></i>仪表盘
+                    </button>
+                    <button class="nav-tab-btn flex items-center gap-3 w-full px-4 py-3 rounded-xl text-sm font-semibold text-slate-500 hover:text-brand-600 hover:bg-brand-50/50 transition-all duration-200" data-view="positions">
+                        <i data-lucide="git-pull-request" class="w-4 h-4"></i>求职进度
+                    </button>
+                    <button class="nav-tab-btn flex items-center gap-3 w-full px-4 py-3 rounded-xl text-sm font-semibold text-slate-500 hover:text-brand-600 hover:bg-brand-50/50 transition-all duration-200" data-view="resumes">
+                        <i data-lucide="folder-kanban" class="w-4 h-4"></i>资料库
+                    </button>
+                    <button class="nav-tab-btn flex items-center gap-3 w-full px-4 py-3 rounded-xl text-sm font-semibold text-slate-500 hover:text-brand-600 hover:bg-brand-50/50 transition-all duration-200" data-view="analytics">
+                        <i data-lucide="bar-chart-3" class="w-4 h-4"></i>数据洞察
+                    </button>
+                    <button class="nav-tab-btn flex items-center gap-3 w-full px-4 py-3 rounded-xl text-sm font-semibold text-slate-500 hover:text-brand-600 hover:bg-brand-50/50 transition-all duration-200" data-view="settings">
+                        <i data-lucide="settings" class="w-4 h-4"></i>设置系统
+                    </button>
+                </nav>
+            </div>
+
+            <!-- Profile Info & Sync State -->
+            <div class="pt-6 border-t border-slate-100">
+                <div class="flex items-center justify-between p-3 bg-brand-50/40 rounded-2xl border border-brand-100/30">
+                    <div class="flex items-center gap-2 min-w-0">
+                        <div class="w-8 h-8 rounded-full bg-brand-100 flex items-center justify-center text-xs text-brand-600 shrink-0" id="user-avatar">👤</div>
+                        <div class="min-w-0">
+                            <p class="text-xs font-bold text-slate-700 truncate" id="user-display-email">未登录账号</p>
+                            <span class="text-[10px] text-slate-400 flex items-center gap-1" id="sync-badge-text">
+                                <span class="w-1.5 h-1.5 rounded-full bg-slate-400 animate-pulse" id="sync-dot"></span>本地存储
+                            </span>
+                        </div>
+                    </div>
+                    <button id="sync-btn" class="p-2 hover:bg-white rounded-lg transition-all text-slate-400 hover:text-brand-600 shadow-sm" title="上传数据">
+                        <i data-lucide="cloud-lightning" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Mobile Top Navbar -->
+        <header class="md:hidden flex items-center justify-between px-4 py-3 bg-white border-b border-slate-100 sticky top-0 z-40 shadow-sm">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center text-white font-bold">J</div>
+                <h1 class="font-black text-slate-900 text-sm tracking-tight">JobTracker</h1>
+            </div>
+            <button id="mobile-sync-trigger" class="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-brand-50 text-brand-600 border border-brand-100">
+                <span class="w-1.5 h-1.5 rounded-full bg-slate-400" id="mobile-sync-dot"></span>
+                <span id="mobile-sync-text">本地</span>
+            </button>
+        </header>
+
+        <!-- Main Workspace -->
+        <div class="flex-1 flex flex-col min-w-0">
+            <main class="flex-grow p-4 md:p-8 max-w-6xl w-full mx-auto pb-24 md:pb-8">
+                
+                <!-- 仪表盘 VIEW -->
+                <section id="view-dashboard" class="view space-y-6">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <h2 class="text-2xl font-bold text-slate-900" id="dashboard-welcome">你好，求职者 👋</h2>
+                            <p class="text-xs text-slate-400 mt-1">今天又是充满新机遇的一天，继续加油！</p>
+                        </div>
+                    </div>
+
+                    <!-- KPI Cards Grid (Upgraded visually) -->
+                    <div class="grid grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4">
+                        <div class="bg-white border border-slate-100 p-5 rounded-2xl shadow-premium transition-all hover:shadow-hover-glow hover:-translate-y-0.5 duration-200">
+                            <div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mb-3 shadow-inner">
+                                <i data-lucide="target" class="w-5 h-5"></i>
+                            </div>
+                            <div class="text-2xl font-black text-slate-900" id="stat-total">0</div>
+                            <div class="text-xs text-slate-400 mt-1">跟踪岗位总数</div>
+                        </div>
+                        <div class="bg-white border border-slate-100 p-5 rounded-2xl shadow-premium transition-all hover:shadow-hover-glow hover:-translate-y-0.5 duration-200">
+                            <div class="w-10 h-10 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center mb-3 shadow-inner">
+                                <i data-lucide="send" class="w-5 h-5"></i>
+                            </div>
+                            <div class="text-2xl font-black text-slate-900" id="stat-delivered">0</div>
+                            <div class="text-xs text-slate-400 mt-1">已投递简历</div>
+                        </div>
+                        <div class="bg-white border border-slate-100 p-5 rounded-2xl shadow-premium transition-all hover:shadow-hover-glow hover:-translate-y-0.5 duration-200">
+                            <div class="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center mb-3 shadow-inner">
+                                <i data-lucide="messages-square" class="w-5 h-5"></i>
+                            </div>
+                            <div class="text-2xl font-black text-slate-900" id="stat-interviewing">0</div>
+                            <div class="text-xs text-slate-400 mt-1">面试进行中</div>
+                        </div>
+                        <div class="bg-white border border-slate-100 p-5 rounded-2xl shadow-premium transition-all hover:shadow-hover-glow hover:-translate-y-0.5 duration-200">
+                            <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-3 shadow-inner">
+                                <i data-lucide="sparkles" class="w-5 h-5"></i>
+                            </div>
+                            <div class="text-2xl font-black text-slate-900" id="stat-offers">0</div>
+                            <div class="text-xs text-slate-400 mt-1">已斩获 Offer</div>
+                        </div>
+                        <div class="bg-white border border-slate-100 p-5 rounded-2xl shadow-premium col-span-2 lg:col-span-1 transition-all hover:shadow-hover-glow hover:-translate-y-0.5 duration-200">
+                            <div class="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center mb-3 shadow-inner">
+                                <i data-lucide="hourglass" class="w-5 h-5"></i>
+                            </div>
+                            <div class="text-2xl font-black text-slate-900" id="stat-followup">0</div>
+                            <div class="text-xs text-slate-400 mt-1">超7天待跟进</div>
+                        </div>
+                    </div>
+
+                    <!-- Funnel & Reminders -->
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div class="bg-white border border-slate-100 p-6 rounded-2xl shadow-premium lg:col-span-2 space-y-4">
+                            <h3 class="font-bold text-slate-900 flex items-center gap-2">
+                                <i data-lucide="funnel" class="w-4 h-4 text-brand-500"></i>求职漏斗转化率
+                            </h3>
+                            <div class="space-y-3" id="funnel-container"></div>
+                        </div>
+                        <div class="bg-white border border-slate-100 p-6 rounded-2xl shadow-premium space-y-4">
+                            <h3 class="font-bold text-slate-900 flex items-center gap-2">
+                                <i data-lucide="alarm-clock" class="w-4 h-4 text-rose-500"></i>重要事项提醒
+                            </h3>
+                            <div class="space-y-3 overflow-y-auto max-h-[300px]" id="reminder-list"></div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Activities -->
+                    <div class="bg-white border border-slate-100 p-6 rounded-2xl shadow-premium">
+                        <h3 class="font-bold text-slate-900 flex items-center gap-2 mb-4">
+                            <i data-lucide="history" class="w-4 h-4 text-brand-500"></i>求职足迹动态
+                        </h3>
+                        <div class="divide-y divide-slate-100" id="recent-activities"></div>
+                    </div>
+                </section>
+
+                <!-- 求职进度 VIEW -->
+                <section id="view-positions" class="view hidden space-y-6">
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                        <div>
+                            <h2 class="text-2xl font-bold text-slate-900">求职战斗进度</h2>
+                            <p class="text-xs text-slate-400 mt-1">管理目标公司与投递岗位，支持拖拽自定义卡片排序</p>
+                        </div>
+                        <div class="flex items-center gap-2 shrink-0">
+                            <button class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 transition-all shadow-sm" onclick="app.openModal('company')">
+                                <i data-lucide="plus-circle" class="w-4 h-4"></i>添加公司
+                            </button>
+                            <button class="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 shadow-md hover:shadow-lg transition-all" onclick="app.openPositionModal()">
+                                <i data-lucide="plus" class="w-4 h-4"></i>新建岗位
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Search and Filters -->
+                    <div class="bg-white border border-slate-100 p-4 rounded-2xl shadow-premium flex flex-col md:flex-row gap-3">
+                        <div class="flex-1 relative">
+                            <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+                            <input type="text" id="pos-search" placeholder="输入公司、岗位关键词..." class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-500 focus:bg-white transition-all" oninput="app.renderPositions()">
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            <select id="pos-status" class="bg-slate-50 border border-slate-200 text-slate-600 text-xs px-3 py-2 rounded-xl focus:outline-none focus:border-brand-500 transition-all font-semibold" onchange="app.renderPositions()">
+                                <option value="">所有状态</option>
+                                <option value="未投递">未投递</option>
+                                <option value="投递">已投递</option>
+                                <option value="笔试">笔试</option>
+                                <option value="一面">一面</option>
+                                <option value="二面">二面</option>
+                                <option value="三面">三面</option>
+                                <option value="HR面">HR面</option>
+                                <option value="Offer">Offer</option>
+                                <option value="接受">接受</option>
+                                <option value="拒绝">拒绝</option>
+                            </select>
+                            <select id="pos-priority" class="bg-slate-50 border border-slate-200 text-slate-600 text-xs px-3 py-2 rounded-xl focus:outline-none focus:border-brand-500 transition-all font-semibold" onchange="app.renderPositions()">
+                                <option value="">星级筛选</option>
+                                <option value="5">⭐⭐⭐⭐⭐</option>
+                                <option value="4">⭐⭐⭐⭐</option>
+                                <option value="3">⭐⭐⭐</option>
+                                <option value="2">⭐⭐</option>
+                                <option value="1">⭐</option>
+                            </select>
+                            <div class="flex gap-1 border border-slate-200 rounded-xl overflow-hidden bg-slate-50 shadow-inner">
+                                <button class="px-3 py-2 text-[11px] font-bold text-slate-500 hover:text-slate-800 transition-all" onclick="app.expandAllCompanies()">全部展开</button>
+                                <button class="px-3 py-2 text-[11px] font-bold text-slate-500 hover:text-slate-800 border-l border-slate-200 transition-all" onclick="app.collapseAllCompanies()">全部收起</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="company-section" class="mb-4"></div>
+                    <div class="space-y-4" id="company-accordion-list"></div>
+                </section>
+
+                <!-- 资料库 VIEW -->
+                <section id="view-resumes" class="view hidden space-y-6">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <h2 class="text-2xl font-bold text-slate-900">求职资料夹</h2>
+                            <p class="text-xs text-slate-400 mt-1">管理你的专属定制简历、1分钟自我介绍和通用求职信</p>
+                        </div>
+                        <button class="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 shadow-md hover:shadow-lg transition-all" onclick="app.openModal('resume')">
+                            <i data-lucide="file-plus" class="w-4 h-4"></i>新建资料
+                        </button>
+                    </div>
+
+                    <div class="flex flex-col md:flex-row gap-6">
+                        <!-- Categorization sidebar -->
+                        <div class="w-full md:w-48 space-y-1 shrink-0 flex flex-row md:flex-col overflow-x-auto md:overflow-visible gap-1 pb-2 md:pb-0">
+                            <button class="resume-cat-btn flex items-center justify-center md:justify-start gap-2 px-4 py-3 rounded-xl text-xs font-bold w-full whitespace-nowrap bg-brand-50 text-brand-600 transition-all" data-cat="all" onclick="app.filterResumes('all')">
+                                全部资料
+                            </button>
+                            <button class="resume-cat-btn flex items-center justify-center md:justify-start gap-2 px-4 py-3 rounded-xl text-xs font-bold w-full whitespace-nowrap text-slate-500 hover:text-brand-600 hover:bg-brand-50/50 transition-all" data-cat="resume" onclick="app.filterResumes('resume')">
+                                📄 定制简历
+                            </button>
+                            <button class="resume-cat-btn flex items-center justify-center md:justify-start gap-2 px-4 py-3 rounded-xl text-xs font-bold w-full whitespace-nowrap text-slate-500 hover:text-brand-600 hover:bg-brand-50/50 transition-all" data-cat="intro" onclick="app.filterResumes('intro')">
+                                🎤 自我介绍
+                            </button>
+                            <button class="resume-cat-btn flex items-center justify-center md:justify-start gap-2 px-4 py-3 rounded-xl text-xs font-bold w-full whitespace-nowrap text-slate-500 hover:text-brand-600 hover:bg-brand-50/50 transition-all" data-cat="cover" onclick="app.filterResumes('cover')">
+                                ✉️ 自荐信
+                            </button>
+                            <button class="resume-cat-btn flex items-center justify-center md:justify-start gap-2 px-4 py-3 rounded-xl text-xs font-bold w-full whitespace-nowrap text-slate-500 hover:text-brand-600 hover:bg-brand-50/50 transition-all" data-cat="other" onclick="app.filterResumes('other')">
+                                📁 其他材料
+                            </button>
+                        </div>
+                        <!-- Resumes list grid -->
+                        <div class="flex-1 grid grid-cols-1 xl:grid-cols-2 gap-4" id="resumes-grid"></div>
+                    </div>
+                </section>
+
+                <!-- 洞察 VIEW -->
+                <section id="view-analytics" class="view hidden space-y-6">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <h2 class="text-2xl font-bold text-slate-900">数据深度透视</h2>
+                            <p class="text-xs text-slate-400 mt-1">自动归纳复盘亮点、核心高频问题以及盲区诊断</p>
+                        </div>
+                    </div>
+                    <div id="analytics-grid" class="space-y-6"></div>
+                </section>
+
+                <!-- 设置 VIEW -->
+                <section id="view-settings" class="view hidden space-y-6">
+                    <div>
+                        <h2 class="text-2xl font-bold text-slate-900">设置与系统诊断</h2>
+                        <p class="text-xs text-slate-400 mt-1">配置数据存储、执行云同步与检查系统健康状态</p>
+                    </div>
+
+                    <div class="max-w-xl space-y-6">
+                        <!-- Cloud Sync Status Card -->
+                        <div class="bg-white border border-slate-100 p-6 rounded-2xl shadow-premium space-y-4">
+                            <h3 class="font-bold text-slate-900 flex items-center gap-2">
+                                <i data-lucide="cloud" class="w-4 h-4 text-brand-500 animate-pulse"></i>Firebase 极速同步
+                            </h3>
+                            <p class="text-xs text-slate-400 leading-relaxed">接入 Firebase 实时云服务，允许在任意桌面或移动端保持数据强一致。请确认您的 Firestore 规则已经正确配置。</p>
+                            
+                            <div id="firebase-status" class="p-3 bg-slate-50 border border-slate-100 rounded-xl text-xs text-slate-500">
+                                正在检测 Firebase 宿主环境连接...
+                            </div>
+
+                            <div class="flex flex-wrap gap-2 pt-2">
+                                <button class="bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-md transition-all flex items-center gap-2" onclick="app.firebaseLogin()">
+                                    <i data-lucide="log-in" class="w-3.5 h-3.5"></i> Google 登录
+                                </button>
+                                <button class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold px-4 py-2.5 rounded-xl border border-slate-200 transition-all" onclick="app.uploadFirebase()">
+                                    上传云端
+                                </button>
+                                <button class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold px-4 py-2.5 rounded-xl border border-slate-200 transition-all" onclick="app.downloadFirebase()">
+                                    拉取到本地
+                                </button>
+                                <button class="bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-bold px-4 py-2.5 rounded-xl border border-rose-100 transition-all" onclick="app.firebaseLogout()">
+                                    退出登录
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Local Backup Card -->
+                        <div class="bg-white border border-slate-100 p-6 rounded-2xl shadow-premium space-y-4">
+                            <h3 class="font-bold text-slate-900 flex items-center gap-2">
+                                <i data-lucide="database" class="w-4 h-4 text-brand-500"></i>本地离线备份
+                            </h3>
+                            <p class="text-xs text-slate-400 leading-relaxed">不依赖外部网络服务，支持手动将本地的作战进度、面试复盘数据打包为标准的 JSON 备份文件以便跨端导入。</p>
+                            
+                            <!-- Health Check Storage Meter -->
+                            <div class="space-y-1 pt-1">
+                                <div class="flex justify-between text-[11px] text-slate-400">
+                                    <span>本地磁盘剩余额度估值</span>
+                                    <span id="storage-meter-text">0.00 / 5.00 MB</span>
+                                </div>
+                                <div class="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                                    <div id="storage-meter-bar" class="h-full bg-brand-500 rounded-full transition-all" style="width: 0%"></div>
+                                </div>
+                                <p class="text-[10px] text-slate-400 pt-1 leading-normal" id="storage-quota-warning">温馨提示：上传较大的简历PDF可能消耗较多配额，建议不超过 2MB 保持系统流畅运转。</p>
+                            </div>
+
+                            <div class="flex gap-2 pt-2">
+                                <button class="bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-md transition-all flex items-center gap-2" onclick="app.exportJSON()">
+                                    <i data-lucide="download" class="w-3.5 h-3.5"></i> 导出备份
+                                </button>
+                                <label class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold px-4 py-2.5 rounded-xl border border-slate-200 cursor-pointer transition-all flex items-center gap-2">
+                                    <i data-lucide="upload" class="w-3.5 h-3.5"></i> 导入备份
+                                    <input type="file" class="hidden" accept=".json" onchange="app.importJSON(this)">
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- System Actions Card -->
+                        <div class="bg-white border border-slate-100 p-6 rounded-2xl shadow-premium space-y-4">
+                            <h3 class="font-bold text-slate-900 flex items-center gap-2 text-rose-600">
+                                <i data-lucide="shield-alert" class="w-4 h-4 text-rose-500"></i>高级数据管理
+                            </h3>
+                            <p class="text-xs text-slate-400">提供一键填充模拟演示环境或彻底抹除所有求职印记功能，操作将直接覆盖当前设备。</p>
+                            <div class="flex gap-2">
+                                <button class="bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-600 text-xs font-bold px-4 py-2.5 rounded-xl transition-all" onclick="app.loadDemoData()">
+                                    加载演示演练数据
+                                </button>
+                                <button class="bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-bold px-4 py-2.5 rounded-xl border border-rose-100 transition-all" onclick="app.clearAllData()">
+                                    销毁并清空当前存储
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+            </main>
+        </div>
+    </div>
+
+    <!-- Mobile Bottom Navigation Bar -->
+    <div class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 flex justify-around py-2 px-1 z-50 shadow-lg">
+        <button class="nav-tab-btn flex flex-col items-center gap-0.5 text-[10px] font-semibold text-brand-600 flex-1" data-view="dashboard">
+            <i data-lucide="layout-dashboard" class="w-5 h-5"></i>仪表盘
+        </button>
+        <button class="nav-tab-btn flex flex-col items-center gap-0.5 text-[10px] font-semibold text-slate-400 flex-1" data-view="positions">
+            <i data-lucide="git-pull-request" class="w-5 h-5"></i>求职进度
+        </button>
+        <button class="nav-tab-btn flex flex-col items-center gap-0.5 text-[10px] font-semibold text-slate-400 flex-1" data-view="resumes">
+            <i data-lucide="folder-kanban" class="w-5 h-5"></i>资料库
+        </button>
+        <button class="nav-tab-btn flex flex-col items-center gap-0.5 text-[10px] font-semibold text-slate-400 flex-1" data-view="analytics">
+            <i data-lucide="bar-chart-3" class="w-5 h-5"></i>数据洞察
+        </button>
+        <button class="nav-tab-btn flex flex-col items-center gap-0.5 text-[10px] font-semibold text-slate-400 flex-1" data-view="settings">
+            <i data-lucide="settings" class="w-5 h-5"></i>设置
+        </button>
+    </div>
+
+    <!-- 通用 MODAL 背板 -->
+    <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 transition-all duration-300 opacity-0 pointer-events-none" id="modal-backdrop" onclick="app.closeModal()">
+        <div class="bg-white w-full max-w-lg rounded-3xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden translate-y-8 transition-all duration-300 border border-slate-100" onclick="event.stopPropagation()">
+            <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                <h3 class="font-extrabold text-slate-800 text-sm tracking-tight" id="modal-title">标题</h3>
+                <button class="w-8 h-8 rounded-full hover:bg-slate-200/60 flex items-center justify-center text-slate-400 hover:text-slate-700 transition-all" onclick="app.closeModal()">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+            <div class="p-6 overflow-y-auto space-y-4" id="modal-body"></div>
+            <div class="px-6 py-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-2" id="modal-footer"></div>
+        </div>
+    </div>
+
+    <!-- 详情 MODAL 背板 -->
+    <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 transition-all duration-300 opacity-0 pointer-events-none" id="detail-backdrop" onclick="app.closeDetail()">
+        <div class="bg-white w-full max-w-4xl rounded-3xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden translate-y-8 transition-all duration-300 border border-slate-100" onclick="event.stopPropagation()">
+            <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center text-white font-black text-sm shadow-md shadow-brand-500/10" id="detail-logo font-bold">🏢</div>
+                    <div>
+                        <h3 class="font-bold text-slate-800 text-sm tracking-tight" id="detail-title">岗位</h3>
+                        <p class="text-xs text-slate-400 mt-0.5 font-semibold" id="detail-company">公司名称</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button class="bg-brand-50 hover:bg-brand-100 text-brand-600 px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all border border-brand-100/50" onclick="app.openPrepSheet()">
+                        <i data-lucide="scroll" class="w-3.5 h-3.5"></i>专属准备包
+                    </button>
+                    <button class="w-8 h-8 rounded-full hover:bg-slate-200/60 flex items-center justify-center text-slate-400 hover:text-slate-700 transition-all" onclick="app.closeDetail()">
+                        <i data-lucide="x" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="p-6 overflow-y-auto" id="detail-body"></div>
+        </div>
+    </div>
+
+    <!-- APP核心逻辑脚本 -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyBeDDg-byQf-mkRlPDijlwAoDyExg4LacQ",
+            authDomain: "jobtracker-fcdee.firebaseapp.com",
+            projectId: "jobtracker-fcdee",
+            storageBucket: "jobtracker-fcdee.firebasestorage.app",
+            messagingSenderId: "42260314441",
+            appId: "1:42260314441:web:cee2d0ee0522dfb0570298",
+            measurementId: "G-VSNHC9N719"
+        };
+
+        const firebaseApp = initializeApp(firebaseConfig);
+        const auth = getAuth(firebaseApp);
+        const db = getFirestore(firebaseApp);
+        const provider = new GoogleAuthProvider();
+
+        // Firebase Store Service Wrapper
+        const FirebaseStore = {
+            currentUser: null,
+            ready: true,
+
+            getUser() {
+                return this.currentUser;
+            },
+            async signIn() {
+                const result = await signInWithPopup(auth, provider);
+                this.currentUser = result.user;
+                return this.currentUser;
+            },
+            async signOut() {
+                await signOut(auth);
+                this.currentUser = null;
+            },
+            getDocRef() {
+                if (!this.currentUser) throw new Error('请先使用 Google 登录');
+                return doc(db, 'users', this.currentUser.uid, 'jobtracker', 'main');
+            },
+            cleanData(data) {
+                const copy = JSON.parse(JSON.stringify(data || {}));
+                copy.config = { token: '', gistId: '' };
+                return copy;
+            },
+            async upload(data) {
+                const clean = this.cleanData(data);
+                await setDoc(this.getDocRef(), {
+                    data: clean,
+                    updatedAt: serverTimestamp(),
+                    userEmail: this.currentUser.email || '',
+                    appName: 'JobTracker'
+                }, { merge: true });
+            },
+            async download() {
+                const snap = await getDoc(this.getDocRef());
+                if (!snap.exists()) return null;
+                return snap.data().data || null;
+            }
+        };
+
+        // Local Storage State Manager
+        const DataStore = {
+            key: 'jobtracker_data',
+            get() {
+                try {
+                    const raw = localStorage.getItem(this.key);
+                    if (raw) return this.normalize(JSON.parse(raw));
+                } catch (e) { console.error('数据加载失败', e); }
+                return this.getDefault();
+            },
+            set(data) {
+                try {
+                    localStorage.setItem(this.key, JSON.stringify(this.normalize(data)));
+                } catch (e) {
+                    console.error('数据持久化失败', e);
+                    throw new Error('本地存储已满，请清理无关简历或自荐信文件');
+                }
+            },
+            getDefault() {
+                return {
+                    companies: [], positions: [], resumes: [], interviews: [], activities: [],
+                    config: { token: '', gistId: '' }
+                };
+            },
+            normalize(data) {
+                const base = this.getDefault();
+                const safe = data && typeof data === 'object' ? data : {};
+                const companies = Array.isArray(safe.companies)
+                    ? safe.companies.map((company, index) => ({
+                        ...company,
+                        order: Number.isFinite(Number(company.order)) ? Number(company.order) : index * 10,
+                        city: company.city || ''
+                    }))
+                    : [];
+                return {
+                    ...base, ...safe,
+                    companies,
+                    positions: Array.isArray(safe.positions) ? safe.positions : [],
+                    resumes: Array.isArray(safe.resumes) ? safe.resumes : [],
+                    interviews: Array.isArray(safe.interviews) ? safe.interviews : [],
+                    activities: Array.isArray(safe.activities) ? safe.activities : [],
+                    config: { ...base.config, ...(safe.config || {}) }
+                };
+            },
+            uid(prefix = 'id') {
+                return prefix + '_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+            },
+            addCompany(company) {
+                const data = this.get();
+                company.id = this.uid('c');
+                company.createdAt = new Date().toISOString();
+                data.companies.push(company);
+                this.set(data);
+                return company;
+            },
+            updateCompany(id, updates) {
+                const data = this.get();
+                const idx = data.companies.findIndex(c => c.id === id);
+                if (idx >= 0) {
+                    data.companies[idx] = { ...data.companies[idx], ...updates, updatedAt: new Date().toISOString() };
+                    this.set(data);
+                }
+            },
+            addPosition(pos) {
+                const data = this.get();
+                pos.id = this.uid('p');
+                pos.createdAt = new Date().toISOString();
+                pos.updatedAt = pos.createdAt;
+                data.positions.push(pos);
+                this.addActivity(pos.id, pos.status, '新增投递', pos.createdAt, data);
+                this.set(data);
+                return pos;
+            },
+            updatePosition(id, updates) {
+                const data = this.get();
+                const idx = data.positions.findIndex(p => p.id === id);
+                if (idx >= 0) {
+                    const old = data.positions[idx];
+                    const now = new Date().toISOString();
+                    data.positions[idx] = { ...old, ...updates, updatedAt: now };
+                    if (updates.status && updates.status !== old.status) {
+                        this.addActivity(id, updates.status, `${old.status} → ${updates.status}`, now.split('T')[0], data);
+                    }
+                    this.set(data);
+                }
+            },
+            deletePosition(id) {
+                const data = this.get();
+                data.positions = data.positions.filter(p => p.id !== id);
+                data.interviews = data.interviews.filter(i => i.positionId !== id);
+                data.activities = data.activities.filter(a => a.positionId !== id);
+                this.set(data);
+            },
+            addInterview(interview) {
+                const data = this.get();
+                interview.id = this.uid('i');
+                interview.createdAt = new Date().toISOString();
+                data.interviews.push(interview);
+                const pos = data.positions.find(p => p.id === interview.positionId);
+                if (pos && !['Offer','拒绝','接受'].includes(pos.status)) {
+                    const map = { '笔试': '笔试', '一面': '一面', '二面': '二面', '三面': '三面', 'HR面': 'HR面' };
+                    if (map[interview.round]) {
+                        pos.status = map[interview.round];
+                        pos.updatedAt = interview.createdAt;
+                        this.addActivity(pos.id, pos.status, `${interview.round}完成`, interview.date, data);
+                    }
+                }
+                this.set(data);
+                return interview;
+            },
+            updateInterview(id, updates) {
+                const data = this.get();
+                const idx = data.interviews.findIndex(i => i.id === id);
+                if (idx >= 0) {
+                    data.interviews[idx] = { ...data.interviews[idx], ...updates };
+                    this.set(data);
+                }
+            },
+            deleteInterview(id) {
+                const data = this.get();
+                data.interviews = data.interviews.filter(i => i.id !== id);
+                this.set(data);
+            },
+            addResume(resume) {
+                const data = this.get();
+                resume.id = this.uid('r');
+                resume.createdAt = new Date().toISOString();
+                data.resumes.push(resume);
+                this.set(data);
+                return resume;
+            },
+            updateResume(id, updates) {
+                const data = this.get();
+                const idx = data.resumes.findIndex(r => r.id === id);
+                if (idx >= 0) {
+                    data.resumes[idx] = { ...data.resumes[idx], ...updates };
+                    this.set(data);
+                }
+            },
+            deleteResume(id) {
+                const data = this.get();
+                data.resumes = data.resumes.filter(r => r.id !== id);
+                data.positions.forEach(p => { if (p.resumeId === id) p.resumeId = ''; });
+                this.set(data);
+            },
+            addActivity(positionId, type, notes, date, currentData = null) {
+                const data = currentData || this.get();
+                data.activities.push({
+                    id: this.uid('a'),
+                    positionId, type, notes, date,
+                    createdAt: new Date().toISOString()
+                });
+                if (data.activities.length > 100) data.activities = data.activities.slice(-100);
+                if (!currentData) this.set(data);
+            },
+            loadDemo() {
+                const demo = {
+                    companies: [
+                        { id: 'c_demo1', name: '字节跳动', industry: '互联网', scale: '大厂', website: 'https://www.bytedance.com', notes: '旗下抖音、TikTok。高并发架构需求，注重算法。', createdAt: new Date().toISOString(), order: 0 },
+                        { id: 'c_demo2', name: '美团', industry: '本地生活', scale: '大厂', website: 'https://www.meituan.com', notes: '核心送餐算法，扎实系统设计功底。', createdAt: new Date().toISOString(), order: 10 },
+                        { id: 'c_demo3', name: '小红书', industry: '社交电商', scale: '成长型', website: 'https://www.xiaohongshu.com', notes: '社区推荐算法，崇尚年轻创新团队氛围。', createdAt: new Date().toISOString(), order: 20 }
+                    ],
+                    resumes: [
+                        { id: 'r_demo1', name: '研发通用架构简历', type: 'resume', target: '后端开发', version: 'v3.0', content: '核心亮点：精通高并发分布式缓存。主导高性能Redis网关搭建，TPS提升60%...', fileName: 'Resume_General_Cloud.pdf', createdAt: new Date().toISOString() },
+                        { id: 'r_demo2', name: '美团针对性特制简历', type: 'resume', target: '后台系统研发', version: 'v1.0', content: '针对本地生活优化过链路调配算法，深入熟悉各种图遍历与路径计算...', fileName: 'Resume_LifeService.pdf', createdAt: new Date().toISOString() }
+                    ],
+                    positions: [
+                        { id: 'p_demo1', companyId: 'c_demo1', title: '后端开发工程师', status: '二面', resumeId: 'r_demo1', priority: 5, salary: '25w-35w', location: '北京', deadline: '2026-07-15', jd: '负责抖音高性能核心后端架构，熟练使用Go/Java语言，懂容器化部署。', createdAt: new Date(Date.now()-20*86400000).toISOString(), updatedAt: new Date().toISOString() },
+                        { id: 'p_demo2', companyId: 'c_demo2', title: '算法开发工程师', status: '一面', resumeId: 'r_demo2', priority: 4, salary: '22w-30w', location: '北京', deadline: '2026-06-30', jd: '优化本地派单算法模型，熟悉常见图论算法。', createdAt: new Date(Date.now()-15*86400000).toISOString(), updatedAt: new Date().toISOString() },
+                        { id: 'p_demo3', companyId: 'c_demo3', title: '平台工具开发工程师', status: '投递', resumeId: '', priority: 3, salary: '20w-26w', location: '上海', deadline: '', jd: '负责社区推荐策略自动化系统的集成开发。', createdAt: new Date(Date.now()-5*86400000).toISOString(), updatedAt: new Date().toISOString() }
+                    ],
+                    interviews: [
+                        { id: 'i_demo1', positionId: 'p_demo1', round: '一面', date: '2026-05-10', interviewer: '高总', questions: '[{"q":"为什么想去宁波发展，你家的地理位置更靠近珠三角。","a":"地理位置离家近，亲戚在周边。珠三角气候太湿热不习惯；珠三角更偏机器人算法研发，传统制造业更稳定。"},{"q":"讲讲Go语言的GMP调度优势机制。","a":"G代表协程，M代表内核线程，P代表上下文调度处理器。通过引入本地队列 and Work Stealing 机制减少内核态上下文切换开销。"}]', selfRating: 4, notes: '基础概念答得非常好。但切换算法时细节被追问，有点卡住。下次要补充这块的原理架构。', mood: '平稳', result: '通过', createdAt: new Date().toISOString() },
+                        { id: 'i_demo2', positionId: 'p_demo1', round: '二面', date: '2026-05-28', interviewer: '技术总监', questions: '[{"q":"设计一个支撑秒杀系统的可靠性分布式中间件。","a":"基于Redis集群的Lua脚本实现分布式令牌桶限流，后端使用RabbitMQ异步削峰，并结合TCC分布式事务控制核心库存库的一致性。"}]', selfRating: 3, notes: '高并发秒杀架构画得很完整，不过分布式事务强一致性上稍逊，面试官提出了改进思路。', mood: '紧张', result: '待反馈', createdAt: new Date().toISOString() },
+                        { id: 'i_demo3', positionId: 'p_demo2', round: '一面', date: '2026-05-25', interviewer: '严工', questions: '[{"q":"手写一个经典的LRU算法，并分析时空复杂度。","a":"使用哈希表加双向链表实现，哈希表提供O(1)随机查询，链表提供O(1)的插入与头部移位。"}]', selfRating: 5, notes: '极速写完并完美分析时空复杂度，追问细节游刃有余。', mood: '超水平发挥', result: '通过', createdAt: new Date().toISOString() }
+                    ],
+                    activities: [
+                        { id: 'a1', positionId: 'p_demo1', type: '投递', date: '2026-05-02', notes: '字节校招官网网申', createdAt: new Date(Date.now()-20*86400000).toISOString() },
+                        { id: 'a2', positionId: 'p_demo1', type: '笔试', date: '2026-05-08', notes: '通过4道算法AC率100%', createdAt: new Date(Date.now()-14*86400000).toISOString() },
+                        { id: 'a3', positionId: 'p_demo1', type: '一面', date: '2026-05-10', notes: '顺利通过一面', createdAt: new Date(Date.now()-12*86400000).toISOString() },
+                        { id: 'a4', positionId: 'p_demo1', type: '二面', date: '2026-05-28', notes: '完成二面', createdAt: new Date().toISOString() }
+                    ],
+                    config: { token: '', gistId: '' }
+                };
+                this.set(demo);
+            },
+            clear() {
+                localStorage.removeItem(this.key);
+            }
+        };
+
+        // Main Application Controller Object
+        const app = {
+            data: null,
+            currentView: 'dashboard',
+            currentDetail: null,
+            resumeFilter: 'all',
+            expandedCompanyIds: new Set(),
+            renderedCompanyIds: [],
+            companySortable: null,
+            lastPositionFilterKey: '',
+            modalQAs: [], // Holds current Q&As being edited inside modal
+
+            init() {
+                this.data = DataStore.get();
+                this.bindTabs();
+                this.render();
+                this.updateSyncBadge();
+                this.checkStorageQuota();
+
+                window.addEventListener('firebase-ready', () => {
+                    this.renderSettings();
+                    this.updateSyncBadge();
+                });
+                window.addEventListener('firebase-auth-changed', () => {
+                    this.renderSettings();
+                    this.updateSyncBadge();
+                });
+            },
+
+            // Universal Elegant Toast Notification (UX boost)
+            showToast(message, duration = 3000) {
+                const toast = document.getElementById('global-toast');
+                const toastMsg = document.getElementById('toast-message');
+                if (toast && toastMsg) {
+                    toastMsg.textContent = message;
+                    toast.classList.add('toast-active');
+                    setTimeout(() => {
+                        toast.classList.remove('toast-active');
+                    }, duration);
+                }
+            },
+
+            bindTabs() {
+                document.querySelectorAll('.nav-tab-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        document.querySelectorAll('.nav-tab-btn').forEach(b => {
+                            b.classList.remove('text-brand-600', 'bg-brand-50');
+                            b.classList.add('text-slate-500', 'hover:text-slate-800', 'hover:bg-slate-50');
+                        });
+                        btn.classList.add('text-brand-600', 'bg-brand-50');
+                        btn.classList.remove('text-slate-500', 'hover:text-slate-800', 'hover:bg-slate-50');
+                        
+                        this.switchView(btn.dataset.view);
+                    });
+                });
+
+                document.getElementById('sync-btn').addEventListener('click', () => this.uploadFirebase());
+                
+                // Mobile trigger binding
+                const mobileSyncBtn = document.getElementById('mobile-sync-trigger');
+                if (mobileSyncBtn) {
+                    mobileSyncBtn.addEventListener('click', () => {
+                        this.switchView('settings');
+                    });
+                }
+
+                // Event delegation for generic modal footer buttons
+                document.getElementById('modal-footer').addEventListener('click', (e) => {
+                    const btn = e.target.closest('[data-action]');
+                    if (!btn) return;
+                    const action = btn.dataset.action;
+                    if (this[action]) this[action]();
+                });
+            },
+
+            switchView(view) {
+                this.currentView = view;
+                this.expandedCompanyIds.clear(); 
+                document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
+                document.getElementById(`view-${view}`).classList.remove('hidden');
+                
+                // Re-sync UI active nav states across responsive sidebars/tabbars
+                document.querySelectorAll('.nav-tab-btn').forEach(btn => {
+                    if (btn.dataset.view === view) {
+                        btn.classList.add('text-brand-600', 'bg-brand-50');
+                        btn.classList.remove('text-slate-500', 'hover:text-slate-800', 'hover:bg-slate-50');
+                    } else {
+                        btn.classList.remove('text-brand-600', 'bg-brand-50');
+                        btn.classList.add('text-slate-500', 'hover:text-slate-800', 'hover:bg-slate-50');
+                    }
+                });
+
+                this.render();
+                lucide.createIcons();
+            },
+
+            render() {
+                if (this.currentView === 'dashboard') this.renderDashboard();
+                else if (this.currentView === 'positions') this.renderPositions();
+                else if (this.currentView === 'resumes') this.renderResumes();
+                else if (this.currentView === 'analytics') this.renderAnalytics();
+                else if (this.currentView === 'settings') this.renderSettings();
+                this.checkStorageQuota();
+            },
+
+            escapeHTML(value) {
+                return String(value ?? '').replace(/[&<>"']/g, ch => ({
+                    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+                }[ch]));
+            },
+
+            escapeJSString(value) {
+                return String(value ?? '')
+                    .replace(/\\/g, '\\\\')
+                    .replace(/'/g, "\\'")
+                    .replace(/\r/g, '\\r')
+                    .replace(/\n/g, '\\n')
+                    .replace(/</g, '\\x3C');
+            },
+
+            inlineArg(value) {
+                return this.escapeHTML(this.escapeJSString(value));
+            },
+
+            getSortedCompanies(companies = this.data.companies) {
+                return [...companies]
+                    .map((company, index) => ({ company, index }))
+                    .sort((a, b) => {
+                        const orderA = Number.isFinite(Number(a.company.order)) ? Number(a.company.order) : a.index * 10;
+                        const orderB = Number.isFinite(Number(b.company.order)) ? Number(b.company.order) : b.index * 10;
+                        return orderA - orderB || a.index - b.index;
+                    })
+                    .map(item => item.company);
+            },
+
+            getCompanyJobs(companyId) {
+                return this.data.positions.filter(p => p.companyId === companyId);
+            },
+
+            getCompanyHighestStatus(company) {
+                const statusOrder = ['未投递', '投递', '笔试', '一面', '二面', '三面', 'HR面', 'Offer', '接受'];
+                const jobs = this.getCompanyJobs(company.id);
+                if (!jobs.length) return '未投递';
+                const activeJobs = jobs.filter(p => p.status !== '拒绝');
+                if (!activeJobs.length) return '拒绝';
+                return activeJobs.reduce((highest, job) => {
+                    const currentIndex = statusOrder.indexOf(job.status);
+                    const highestIndex = statusOrder.indexOf(highest);
+                    return currentIndex > highestIndex ? job.status : highest;
+                }, '未投递');
+            },
+
+            getCompanyLastUpdated(company) {
+                const jobs = this.getCompanyJobs(company.id);
+                const jobIds = new Set(jobs.map(p => p.id));
+                const candidates = [];
+
+                jobs.forEach(job => {
+                    if (job.updatedAt) candidates.push(job.updatedAt);
+                });
+                this.data.interviews.forEach(interview => {
+                    if (!jobIds.has(interview.positionId)) return;
+                    if (interview.date) candidates.push(interview.date);
+                    if (interview.createdAt) candidates.push(interview.createdAt);
+                });
+                if (company.updatedAt) candidates.push(company.updatedAt);
+
+                const dates = candidates
+                    .map(value => ({ value, time: new Date(value).getTime() }))
+                    .filter(item => Number.isFinite(item.time))
+                    .sort((a, b) => b.time - a.time);
+
+                if (!dates.length) return '暂无更新';
+                return new Date(dates[0].time).toLocaleDateString('zh-CN');
+            },
+
+            formatJobCount(count) {
+                return `${count} 个跟踪岗位`;
+            },
+
+            getCompanyMetaItems(company) {
+                const items = [
+                    { icon: '🏭', text: company.industry || '未知行业' },
+                    { icon: '👥', text: company.scale || '未知规模' }
+                ];
+                if (company.city) items.push({ icon: '📍', text: company.city });
+                return items;
+            },
+
+            renderCompanyMeta(company) {
+                return this.getCompanyMetaItems(company)
+                    .map(item => `<span class="inline-flex items-center gap-1 bg-blue-50/50 border border-blue-100 text-blue-600 text-xs px-2.5 py-1 rounded-lg"><span>${item.icon}</span>${this.escapeHTML(item.text)}</span>`)
+                    .join('');
+            },
+
+            isCompanyOrderingDisabled() {
+                const search = document.getElementById('pos-search')?.value.trim();
+                const status = document.getElementById('pos-status')?.value;
+                const priority = document.getElementById('pos-priority')?.value;
+                return Boolean(search || status || priority);
+            },
+
+            safeBadgeClass(value) {
+                const allowed = new Set(['未投递', '投递', '笔试', '一面', '二面', '三面', 'HR面', 'Offer', '拒绝', '接受']);
+                return allowed.has(value) ? value : '未投递';
+            },
+
+            getBadgeStyle(status) {
+                const map = {
+                    '未投递': 'bg-slate-100 text-slate-700 border-slate-200',
+                    '投递': 'bg-blue-50 text-blue-700 border-blue-200',
+                    '笔试': 'bg-purple-50 text-purple-700 border-purple-200',
+                    '一面': 'bg-amber-50 text-amber-700 border-amber-200',
+                    '二面': 'bg-amber-50 text-amber-700 border-amber-200',
+                    '三面': 'bg-amber-50 text-amber-700 border-amber-200',
+                    'HR面': 'bg-orange-50 text-orange-700 border-orange-200',
+                    'Offer': 'bg-emerald-50 text-emerald-700 border-emerald-200 font-bold',
+                    '接受': 'bg-teal-50 text-teal-700 border-teal-200 font-bold',
+                    '拒绝': 'bg-rose-50 text-rose-700 border-rose-200'
+                };
+                return map[status] || 'bg-slate-50 text-slate-600 border-slate-100';
+            },
+
+            safeURL(value) {
+                const url = String(value || '').trim();
+                if (!url) return '#';
+                try {
+                    const parsed = new URL(url, window.location.href);
+                    return ['http:', 'https:'].includes(parsed.protocol) ? parsed.href : '#';
+                } catch (e) { return '#'; }
+            },
+
+            // Parses structured questions or legacy plain-text questions
+            parseQuestions(questionsStr) {
+                try {
+                    if (questionsStr && questionsStr.trim().startsWith('[')) {
+                        return JSON.parse(questionsStr);
+                    }
+                } catch (e) { console.error('问答解析错误:', e); }
+                
+                if (!questionsStr) return [];
+                return questionsStr.split('\n').filter(line => line.trim()).map(line => {
+                    const clean = line.replace(/^\d+[\.\、\s]*/, '').trim(); 
+                    const parts = clean.split(/[：:]/);
+                    if (parts.length > 1) {
+                        return { q: parts[0].trim(), a: parts.slice(1).join(':').trim() };
+                    }
+                    return { q: clean, a: '' };
+                });
+            },
+
+            serializeQuestions(qaArray) {
+                return JSON.stringify(qaArray || []);
+            },
+
+            addModalQA() {
+                this.modalQAs.push({ q: '', a: '' });
+                this.renderModalQAList();
+            },
+
+            deleteModalQA(index) {
+                this.modalQAs.splice(index, 1);
+                this.renderModalQAList();
+            },
+
+            updateModalQA(index, field, value) {
+                if (this.modalQAs[index]) {
+                    this.modalQAs[index][field] = value;
+                }
+            },
+
+            renderModalQAList() {
+                const listContainer = document.getElementById('modal-qa-list');
+                if (!listContainer) return;
+
+                listContainer.innerHTML = this.modalQAs.map((item, index) => {
+                    return `
+                    <div class="bg-blue-50/40 border border-blue-100 hover:border-blue-300 rounded-2xl p-4 space-y-3 relative group transition-all" data-qa-index="${index}">
+                        <button type="button" onclick="app.deleteModalQA(${index})" class="absolute top-3 right-3 text-slate-400 hover:text-rose-600 p-1.5 hover:bg-rose-50 rounded-lg transition-all" title="删除此问答">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        </button>
+                        
+                        <!-- Question input -->
+                        <div class="space-y-1">
+                            <div class="flex items-center gap-1.5">
+                                <span class="bg-brand-600 text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center shadow-sm">Q</span>
+                                <label class="text-[11px] font-bold text-slate-500">问题 / 追问</label>
+                            </div>
+                            <textarea class="w-full border border-slate-200 px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all bg-white" rows="2" placeholder="输入面试官当时提出的问题或追问..." oninput="app.updateModalQA(${index}, 'q', this.value)">${this.escapeHTML(item.q)}</textarea>
+                        </div>
+                        
+                        <!-- Answer input -->
+                        <div class="space-y-1">
+                            <div class="flex items-center gap-1.5">
+                                <span class="bg-emerald-500 text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center shadow-sm">A</span>
+                                <label class="text-[11px] font-bold text-slate-500">现场回答 / 优化答案</label>
+                            </div>
+                            <textarea class="w-full border border-slate-200 px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all bg-white" rows="3" placeholder="输入我的现场应答，或后续复盘整理的完美答案..." oninput="app.updateModalQA(${index}, 'a', this.value)">${this.escapeHTML(item.a)}</textarea>
+                        </div>
+                    </div>`;
+                }).join('') || '<div class="text-center text-slate-400 py-6 border border-dashed border-slate-200 rounded-xl text-xs bg-slate-50/50">暂无追问记录，请点击右上角新增问答</div>';
+                
+                lucide.createIcons();
+            },
+
+            checkStorageQuota() {
+                let totalSize = 0;
+                for (let x in localStorage) {
+                    if (localStorage.hasOwnProperty(x)) {
+                        totalSize += (localStorage[x].length + x.length) * 2; // in bytes
+                    }
+                }
+                const mbSize = totalSize / 1024 / 1024;
+                const pct = Math.min(100, (mbSize / 5.0) * 100);
+                
+                const meterText = document.getElementById('storage-meter-text');
+                const meterBar = document.getElementById('storage-meter-bar');
+                const warningMsg = document.getElementById('storage-quota-warning');
+                
+                if (meterText && meterBar) {
+                    meterText.textContent = `${mbSize.toFixed(2)} / 5.00 MB`;
+                    meterBar.style.width = `${pct}%`;
+                    if (pct > 80) {
+                        meterBar.className = "h-full bg-rose-500 rounded-full transition-all";
+                        warningMsg.className = "text-[10px] text-rose-500 pt-1 leading-normal font-bold";
+                        warningMsg.textContent = "警告：本地存储几乎已满！请尽快导出数据并清理大容量附件，避免数据丢失。";
+                    } else {
+                        meterBar.className = "h-full bg-brand-500 rounded-full transition-all";
+                        warningMsg.className = "text-[10px] text-slate-400 pt-1 leading-normal";
+                        warningMsg.textContent = "当前本地空间状态优良，大容量简历支持打包上传至云数据库备份。";
+                    }
+                }
+            },
+
+            renderDashboard() {
+                const now = new Date();
+                const total = this.data.positions.length;
+                const delivered = this.data.positions.filter(p => p.status !== '未投递').length;
+                const interviewing = this.data.positions.filter(p => ['一面','二面','三面','HR面'].includes(p.status)).length;
+                const offers = this.data.positions.filter(p => ['Offer','接受'].includes(p.status)).length;
+                const followUp = this.data.positions.filter(p => {
+                    if (['Offer','接受','拒绝'].includes(p.status)) return false;
+                    return (now - new Date(p.updatedAt)) > 7 * 86400000;
+                }).length;
+
+                document.getElementById('stat-total').textContent = total;
+                document.getElementById('stat-delivered').textContent = delivered;
+                document.getElementById('stat-interviewing').textContent = interviewing;
+                document.getElementById('stat-offers').textContent = offers;
+                document.getElementById('stat-followup').textContent = followUp;
+
+                // Status distribution / funnel chart
+                const stages = ['未投递', '投递', '笔试', '一面', '二面', '三面', 'HR面', 'Offer', '拒绝', '接受'];
+                const counts = stages.map(s => this.data.positions.filter(p => p.status === s).length);
+                const max = Math.max(...counts, 1);
+                const colors = ['#94a3b8', '#3b82f6', '#8b5cf6', '#f59e0b', '#f97316', '#ec4899', '#f43f5e', '#10b981', '#ef4444', '#14b8a6'];
+
+                document.getElementById('funnel-container').innerHTML = stages.map((s, i) => {
+                    const count = counts[i];
+                    const percent = total ? Math.round((count / total) * 100) : 0;
+                    return `<div class="flex items-center gap-4 text-xs font-semibold">
+                        <div class="w-16 text-slate-500 text-right shrink-0">${s}</div>
+                        <div class="flex-grow bg-slate-50 h-7 rounded-xl overflow-hidden border border-slate-100 flex items-center shadow-inner">
+                            <div class="h-full rounded-xl transition-all flex items-center justify-end px-3 text-[11px] text-white font-black" style="width:${(count / max) * 100}%; background:${colors[i]}">
+                                ${count > 0 ? count : ''}
+                            </div>
+                        </div>
+                        <div class="w-10 text-slate-400 text-right">${percent}%</div>
+                    </div>`;
+                }).join('');
+
+                // Actionable Reminders
+                const reminders = [];
+                this.data.positions.forEach(p => {
+                    if (p.deadline) {
+                        const days = Math.ceil((new Date(p.deadline) - now) / 86400000);
+                        if (days <= 3 && days >= -1 && !['Offer','接受','拒绝'].includes(p.status)) {
+                            const c = this.getCompany(p.companyId);
+                            reminders.push({ text: `${c?.name || '未知公司'} · ${p.title} 截止日期临近`, meta: days < 0 ? '已超期' : `${days}天后截止`, urgent: days < 0 });
+                        }
+                    }
+                });
+                this.data.interviews.forEach(i => {
+                    if (i.result === '待反馈') {
+                        const days = Math.floor((now - new Date(i.date)) / 86400000);
+                        if (days >= 3) {
+                            const p = this.data.positions.find(x => x.id === i.positionId);
+                            const c = p ? this.getCompany(p.companyId) : null;
+                            reminders.push({ text: `${c?.name || ''} · ${i.round} 已等待回复`, meta: `${days}天无反馈`, urgent: days > 7 });
+                        }
+                    }
+                });
+
+                document.getElementById('reminder-list').innerHTML = reminders.length === 0
+                    ? '<div class="text-center text-slate-400 py-6 text-xs flex flex-col items-center justify-center gap-2"><i data-lucide="party-popper" class="w-8 h-8 text-slate-300"></i>暂无告警事项，一切尽在掌握！</div>'
+                    : reminders.sort((a,b) => (b.urgent ? 1 : 0) - (a.urgent ? 1 : 0)).map(r => `
+                        <div class="p-3 border rounded-xl flex justify-between items-start text-xs ${r.urgent ? 'bg-rose-50 border-rose-100 text-rose-800' : 'bg-amber-50 border-amber-100 text-amber-800'}">
+                            <div class="flex gap-2">
+                                <span class="w-1.5 h-1.5 rounded-full mt-1.5 ${r.urgent ? 'bg-rose-500' : 'bg-amber-500'}"></span>
+                                <div class="font-bold leading-relaxed">${this.escapeHTML(r.text)}</div>
+                            </div>
+                            <span class="text-[10px] uppercase font-bold shrink-0 bg-white/65 px-2 py-0.5 rounded-md border">${this.escapeHTML(r.meta)}</span>
+                        </div>`).join('');
+
+                // Recent Activities Timeline
+                const acts = [...this.data.activities].sort((a,b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
+                document.getElementById('recent-activities').innerHTML = acts.map(a => {
+                    const p = this.data.positions.find(x => x.id === a.positionId);
+                    const c = p ? this.getCompany(p.companyId) : null;
+                    const badgeStyle = this.getBadgeStyle(a.type);
+                    return `<div class="flex items-center justify-between py-4.5 text-xs transition-all hover:bg-slate-50 px-2 rounded-xl">
+                        <div class="flex items-center gap-3">
+                            <div class="text-slate-400 text-[11px] font-mono shrink-0">${this.escapeHTML(a.date)}</div>
+                            <span class="border px-2.5 py-0.5 rounded-lg text-[10px] font-bold ${badgeStyle}">${this.escapeHTML(a.type)}</span>
+                            <div class="font-bold text-slate-700">${this.escapeHTML(c?.name || '')} <span class="font-normal text-slate-500">· ${this.escapeHTML(p?.title || '')}</span></div>
+                        </div>
+                        ${a.notes ? `<div class="text-slate-400 text-[11px] max-w-[200px] truncate" title="${this.escapeHTML(a.notes)}">${this.escapeHTML(a.notes)}</div>` : ''}
+                    </div>`;
+                }).join('') || '<div class="text-center text-slate-400 py-8 text-xs">暂无动态记录</div>';
+            },
+
+            renderPositions() {
+                const search = document.getElementById('pos-search').value.toLowerCase();
+                const status = document.getElementById('pos-status').value;
+                const priority = document.getElementById('pos-priority').value;
+                const isOrderingDisabled = Boolean(search.trim() || status || priority);
+                const filterKey = `${search.trim()}|${status}|${priority}`;
+
+                const filterJobs = (jobs, companyMatched = false) => {
+                    let filtered = [...jobs];
+                    if (search && !companyMatched) {
+                        filtered = filtered.filter(p => {
+                            const haystack = `${p.title || ''}${p.location || ''}${p.salary || ''}${p.jd || ''}`.toLowerCase();
+                            return haystack.includes(search);
+                        });
+                    }
+                    if (status) filtered = filtered.filter(p => p.status === status);
+                    if (priority) filtered = filtered.filter(p => p.priority === parseInt(priority));
+                    return filtered.sort((a, b) => (b.priority || 0) - (a.priority || 0) || new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0));
+                };
+
+                const companies = this.getSortedCompanies().filter(company => {
+                    const companyHaystack = `${company.name || ''}${company.industry || ''}${company.scale || ''}${company.city || ''}${company.notes || ''}`.toLowerCase();
+                    const companyMatched = search && companyHaystack.includes(search);
+                    const jobs = this.getCompanyJobs(company.id);
+                    const filteredJobs = filterJobs(jobs, companyMatched);
+                    if (!search && !status && !priority) return true;
+                    return companyMatched || filteredJobs.length > 0;
+                });
+
+                this.renderedCompanyIds = companies.map(c => c.id);
+                if (filterKey !== this.lastPositionFilterKey) {
+                    if (isOrderingDisabled) {
+                        this.renderedCompanyIds.forEach(id => this.expandedCompanyIds.add(id));
+                    }
+                    this.lastPositionFilterKey = filterKey;
+                }
+
+                let html = '';
+                if (companies.length === 0 && this.data.companies.length === 0) {
+                    html = '<div class="text-center border-2 border-dashed border-slate-200 p-8 rounded-3xl text-slate-400 text-sm flex flex-col items-center gap-3 bg-white shadow-premium"><i data-lucide="building-2" class="w-12 h-12 text-slate-300"></i>还没有添加任何公司记录，请点击右上角按钮进行录入。</div>';
+                } else if (companies.length === 0) {
+                    html = '<div class="text-center text-slate-400 py-8 text-sm bg-white rounded-3xl border shadow-premium">找不到符合搜索条件的求职记录</div>';
+                } else {
+                    html = companies.map((c, index) => {
+                        const isExpanded = this.expandedCompanyIds.has(c.id);
+                        const allCompanyJobs = this.getCompanyJobs(c.id);
+                        const jobCount = allCompanyJobs.length;
+                        const companyId = this.inlineArg(c.id);
+                        const companyDomId = this.escapeHTML(c.id);
+                        const isFirst = index === 0;
+                        const isLast = index === companies.length - 1;
+                        
+                        const companyHaystack = `${c.name || ''}${c.industry || ''}${c.scale || ''}${c.city || ''}${c.notes || ''}`.toLowerCase();
+                        const companyMatched = search && companyHaystack.includes(search);
+                        const companyJobs = filterJobs(allCompanyJobs, companyMatched);
+                        const highestStatus = this.getCompanyHighestStatus(c);
+                        const badgeStyle = this.getBadgeStyle(highestStatus);
+                        const lastUpdated = this.getCompanyLastUpdated(c);
+                        const dragDisabled = isOrderingDisabled ? 'disabled cursor-not-allowed opacity-30' : '';
+                        
+                        // Active Jobs Cards Sub-grid
+                        const jobsHtml = companyJobs.map(p => {
+                            const r = this.data.resumes.find(x => x.id === p.resumeId);
+                            const ivs = this.data.interviews.filter(i => i.positionId === p.id).sort((a,b) => new Date(b.date) - new Date(a.date));
+                            const last = ivs[0];
+                            const stars = Array(5).fill(0).map((_,i) => `<span class="text-xs ${i < p.priority ? 'text-amber-400' : 'text-slate-200'}">★</span>`).join('');
+                            const positionId = this.inlineArg(p.id);
+                            const pBadgeStyle = this.getBadgeStyle(p.status);
+                            
+                            return `<div class="bg-slate-50/50 border border-slate-100 hover:border-brand-200 hover:shadow-premium hover:bg-white rounded-2xl p-4 transition-all duration-200 cursor-pointer flex flex-col justify-between min-h-[160px]" onclick="event.stopPropagation();app.openDetail('${positionId}')">
+                                <div class="space-y-2">
+                                    <div class="flex justify-between items-start gap-2">
+                                        <h4 class="font-bold text-slate-800 text-sm leading-snug">${this.escapeHTML(p.title)}</h4>
+                                        <span class="border px-2 py-0.5 rounded-lg text-[10px] font-bold shrink-0 ${pBadgeStyle}">${this.escapeHTML(p.status)}</span>
+                                    </div>
+                                    <div class="flex items-center gap-1">${stars}</div>
+                                    <div class="flex items-center gap-2 text-slate-400 text-xs font-semibold">
+                                        <span>📍 ${this.escapeHTML(p.location || '全国')}</span>
+                                        <span>💰 ${this.escapeHTML(p.salary || '面议')}</span>
+                                    </div>
+                                    ${r ? `<div class="inline-flex items-center gap-1.5 bg-brand-50 border border-brand-100 text-brand-700 text-[11px] px-2.5 py-1 rounded-xl">📄 ${this.escapeHTML(r.name)}</div>` : ''}
+                                </div>
+                                <div class="border-t border-slate-100 pt-3 mt-4 flex items-center justify-between text-[11px] text-slate-400 font-semibold">
+                                    <span>${last ? `最近复盘: ${this.escapeHTML(last.round)}` : '暂无面试记录'}</span>
+                                    <div class="flex gap-1.5" onclick="event.stopPropagation()">
+                                        <button class="text-slate-500 hover:text-slate-800 font-bold bg-white border border-slate-200 px-2 py-1 rounded-lg shadow-sm" onclick="app.openPositionModal('${positionId}')">编辑</button>
+                                        <button class="text-white hover:bg-brand-700 font-bold bg-brand-600 px-2 py-1 rounded-lg shadow-md transition-all" onclick="app.advance('${positionId}')">推进</button>
+                                        <button class="text-slate-600 hover:bg-slate-100 font-bold bg-slate-50 border border-slate-200 px-2 py-1 rounded-lg shadow-sm flex items-center gap-0.5" onclick="app.openInterviewModal('${positionId}')">📝记</button>
+                                    </div>
+                                </div>
+                            </div>`;
+                        }).join('') || '<div class="col-span-3 text-center border border-dashed border-slate-200 py-6 text-xs text-slate-400 rounded-2xl bg-slate-50/50">暂无正在跟进的岗位</div>';
+
+                        return `<div class="bg-white border border-slate-100 rounded-3xl p-5 shadow-premium space-y-4 transition-all hover:shadow-hover-glow" data-company-id="${companyDomId}">
+                            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                                <div class="flex items-start gap-3">
+                                    <div class="w-6 h-10 flex items-center justify-center shrink-0">
+                                        <button class="drag-handle text-slate-300 hover:text-brand-500 transition-all ${dragDisabled}" title="上下拖动排序">
+                                            <i data-lucide="grip-vertical" class="w-4 h-4"></i>
+                                        </button>
+                                    </div>
+                                    <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 text-slate-700 font-black flex items-center justify-center shadow-inner text-sm shrink-0">
+                                        ${this.escapeHTML((c.name || '公')[0])}
+                                    </div>
+                                    <div class="space-y-1">
+                                        <div class="flex items-center gap-2">
+                                            <h3 class="font-extrabold text-slate-950 text-base leading-none tracking-tight">${this.escapeHTML(c.name)}</h3>
+                                            <span class="text-[11px] text-slate-400 font-semibold">(${jobCount}个关联)</span>
+                                        </div>
+                                        <div class="flex flex-wrap gap-1">${this.renderCompanyMeta(c)}</div>
+                                    </div>
+                                </div>
+                                <div class="flex items-center justify-end gap-3 flex-wrap">
+                                    <span class="border px-2.5 py-0.5 rounded-lg text-xs font-bold ${badgeStyle}">${this.escapeHTML(highestStatus)}</span>
+                                    <span class="text-xs text-slate-400 font-semibold">更新: ${this.escapeHTML(lastUpdated)}</span>
+                                    <div class="flex items-center gap-1.5">
+                                        <button class="bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-600 text-xs font-bold px-3 py-2 rounded-xl shadow-sm transition-all" onclick="app.openPositionModal(null, '${companyId}')">追加岗位</button>
+                                        <button class="bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-600 text-xs font-bold px-3 py-2 rounded-xl shadow-sm transition-all" onclick="app.openModal('company', '${companyId}')">编辑</button>
+                                        <button class="text-brand-600 hover:text-brand-800 font-extrabold transition-all text-xs px-2" onclick="app.toggleCompanyJobs('${companyId}', event)">
+                                            ${isExpanded ? '收起 ▴' : '展开 ▾'}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            ${c.notes ? `<p class="text-xs text-slate-500 pl-16 max-w-2xl leading-normal border-l-2 border-slate-100 font-medium">${this.escapeHTML(c.notes)}</p>` : ''}
+                            ${isExpanded ? `<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-3 border-t border-slate-50">${jobsHtml}</div>` : ''}
+                        </div>`;
+                    }).join('');
+                }
+
+                document.getElementById('company-accordion-list').innerHTML = html;
+                this.initCompanySortable();
+                lucide.createIcons();
+            },
+
+            toggleCompanyJobs(companyId, event) {
+                if (event) event.stopPropagation();
+                if (this.expandedCompanyIds.has(companyId)) {
+                    this.expandedCompanyIds.delete(companyId);
+                } else {
+                    this.expandedCompanyIds.add(companyId);
+                }
+                this.renderPositions();
+            },
+
+            expandAllCompanies() {
+                this.expandedCompanyIds = new Set(this.renderedCompanyIds);
+                this.renderPositions();
+            },
+
+            collapseAllCompanies() {
+                this.expandedCompanyIds.clear();
+                this.renderPositions();
+            },
+
+            initCompanySortable() {
+                const list = document.getElementById('company-accordion-list');
+                if (this.companySortable) {
+                    this.companySortable.destroy();
+                    this.companySortable = null;
+                }
+                if (!list || this.currentView !== 'positions' || this.isCompanyOrderingDisabled()) return;
+                
+                this.companySortable = Sortable.create(list, {
+                    handle: '.drag-handle',
+                    animation: 150,
+                    ghostClass: 'sortable-ghost',
+                    onEnd: () => this.persistCompanyOrderFromDOM()
+                });
+            },
+
+            persistCompanyOrderFromDOM() {
+                const list = document.getElementById('company-accordion-list');
+                if (!list || this.isCompanyOrderingDisabled()) {
+                    this.renderPositions();
+                    return;
+                }
+
+                const orderedIds = Array.from(list.querySelectorAll('[data-company-id]'))
+                    .map(item => item.dataset.companyId)
+                    .filter(Boolean);
+                if (!orderedIds.length) return;
+
+                this.data = DataStore.get();
+                this.data.companies = this.data.companies.map(company => {
+                    const index = orderedIds.indexOf(company.id);
+                    return index >= 0 ? { ...company, order: index * 10 } : company;
+                });
+                DataStore.set(this.data);
+                this.renderPositions();
+                this.backgroundSync();
+            },
+
+            advance(id) {
+                const p = this.data.positions.find(x => x.id === id);
+                const flow = ['未投递', '投递', '笔试', '一面', '二面', '三面', 'HR面', 'Offer'];
+                const idx = flow.indexOf(p.status);
+                if (idx >= 0 && idx < flow.length - 1) {
+                    DataStore.updatePosition(id, { status: flow[idx + 1] });
+                    this.data = DataStore.get();
+                    this.renderPositions();
+                    this.backgroundSync();
+                    this.showToast(`岗位进度已向前推荐为：${flow[idx + 1]}`);
+                }
+            },
+
+            renderResumes() {
+                let list = this.data.resumes;
+                if (this.resumeFilter !== 'all') list = list.filter(r => r.type === this.resumeFilter);
+                const icons = { resume: '📄', intro: '🎤', cover: '✉️', other: '📁' };
+
+                document.getElementById('resumes-grid').innerHTML = list.map(r => {
+                    const linked = this.data.positions.filter(p => p.resumeId === r.id).length;
+                    const resumeId = this.inlineArg(r.id);
+                    const fileDownloadBtn = r.fileData ? `<button class="text-[11px] font-bold text-brand-600 hover:text-brand-800 bg-brand-50 border border-brand-100 px-3 py-1.5 rounded-lg shadow-sm" onclick="app.downloadFile('${resumeId}', '${this.escapeJSString(r.fileName || '文件')}')">⬇️ 下载附件</button>` : '';
+                    const filePreviewBtn = r.fileData ? `<button class="text-[11px] font-bold text-slate-500 hover:text-slate-800 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg shadow-sm" onclick="app.previewFile('${resumeId}')">👁️ 预览</button>` : '';
+                    
+                    return `<div class="bg-white border border-slate-100 rounded-3xl p-5 shadow-premium hover:shadow-hover-glow hover:border-brand-100/50 transition-all flex flex-col justify-between">
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-start">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-2xl bg-brand-50 border border-brand-100 flex items-center justify-center text-lg">${icons[r.type] || '📁'}</div>
+                                    <div>
+                                        <h4 class="font-extrabold text-slate-900 text-sm leading-none tracking-tight">${this.escapeHTML(r.name)}</h4>
+                                        <span class="text-slate-400 text-[11px] mt-1.5 font-bold block">对口岗位: ${this.escapeHTML(r.target || '通用岗位')}</span>
+                                    </div>
+                                </div>
+                                <button class="p-2 hover:bg-slate-100 rounded-xl transition-all text-slate-400 hover:text-slate-700" onclick="app.editResume('${resumeId}')">
+                                    <i data-lucide="edit-3" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                            ${r.version ? `<span class="inline-block bg-brand-50 border border-brand-100 text-brand-700 text-[10px] font-bold px-2.5 py-0.5 rounded-md">${this.escapeHTML(r.version)}</span>` : ''}
+                            <p class="text-xs text-slate-500 line-clamp-3 leading-normal bg-slate-50/50 p-3 rounded-xl whitespace-pre-wrap font-medium border border-slate-100/40">${this.escapeHTML(r.content || '未提供正文备注。')}</p>
+                        </div>
+                        <div class="border-t border-slate-50 pt-3 mt-4 flex items-center justify-between text-xs text-slate-400 font-bold">
+                            <span>关联 ${linked} 个推进岗位</span>
+                            <div class="flex gap-1.5">${filePreviewBtn}${fileDownloadBtn}</div>
+                        </div>
+                    </div>`;
+                }).join('') || '<div class="col-span-2 text-center border-2 border-dashed border-slate-200 py-10 rounded-3xl text-slate-400 text-xs bg-white shadow-premium">文件夹中空空如也，请点击右上角录入第一份求职材料。</div>';
+
+                document.querySelectorAll('.resume-cat-btn').forEach(b => {
+                    if (b.dataset.cat === this.resumeFilter) {
+                        b.className = "resume-cat-btn flex items-center justify-center md:justify-start gap-2 px-4 py-3 rounded-xl text-xs font-bold w-full whitespace-nowrap bg-brand-50 text-brand-600 transition-all border border-brand-100 shadow-sm";
+                    } else {
+                        b.className = "resume-cat-btn flex items-center justify-center md:justify-start gap-2 px-4 py-3 rounded-xl text-xs font-bold w-full whitespace-nowrap text-slate-500 hover:text-brand-600 hover:bg-brand-50/30 border border-transparent transition-all";
+                    }
+                });
+                lucide.createIcons();
+            },
+
+            previewFile(resumeId) {
+                const resume = this.data.resumes.find(r => r.id === resumeId);
+                if (!resume || !resume.fileData) return this.showToast('附件加载异常，请重新上传文件。');
+                
+                const fileName = resume.fileName || 'file';
+                const ext = fileName.substring(fileName.lastIndexOf('.') + 1).toLowerCase();
+                
+                if (['pdf', 'jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) {
+                    const win = window.open();
+                    win.document.write(`<html><head><title>预览 - ${this.escapeHTML(fileName)}</title><style>body{margin:0;padding:0;background:#1e293b;display:flex;justify-content:center;align-items:center;height:100vh;}embed{width:100%;height:100%;}img{max-width:100%;max-height:100%;object-fit:contain;}</style></head><body>`);
+                    if (ext === 'pdf') {
+                        win.document.write(`<embed src="${resume.fileData}" type="application/pdf" />`);
+                    } else {
+                        win.document.write(`<img src="${resume.fileData}" />`);
+                    }
+                    win.document.write(`</body></html>`);
+                    win.document.close();
+                } else {
+                    this.showToast(`不支持在线预览 .${ext.toUpperCase()} 格式。请点击下载至本地后使用本地软件查阅。`);
+                }
+            },
+
+            downloadFile(resumeId, fileName) {
+                const resume = this.data.resumes.find(r => r.id === resumeId);
+                if (!resume || !resume.fileData) return this.showToast('附件加载异常。');
+                const link = document.createElement('a');
+                link.href = resume.fileData;
+                link.download = fileName;
+                link.click();
+            },
+
+            filterResumes(cat) {
+                this.resumeFilter = cat;
+                this.renderResumes();
+            },
+
+            getPositionType(title = '') {
+                const t = title.toLowerCase();
+                if (t.includes('后端') || t.includes('java') || t.includes('go') || t.includes('c++')) return '后端研发';
+                if (t.includes('前端') || t.includes('h5') || t.includes('web')) return '前端开发';
+                if (t.includes('算法') || t.includes('ai') || t.includes('数据')) return '算法研发';
+                if (t.includes('产品') || t.includes('pm')) return '产品经理';
+                return '其他职能';
+            },
+
+            getAnalyticsStages() {
+                return ['未投递', '投递', '笔试', '一面', '二面', '三面', 'HR面', 'Offer', '接受'];
+            },
+
+            buildKnowledgeBlindSpots() {
+                const records = [];
+                const pattern = /(不熟|卡壳|不会|没答好|模糊|盲区|短板|遗忘|薄弱|下次补|待深入)/;
+                this.data.interviews.forEach(iv => {
+                    const pos = this.data.positions.find(p => p.id === iv.positionId);
+                    const comp = pos ? this.getCompany(pos.companyId) : null;
+                    const inputs = [iv.questions, iv.notes];
+                    
+                    inputs.forEach(text => {
+                        if (!text) return;
+                        // Handle structured JSON gracefully
+                        const list = this.parseQuestions(text);
+                        list.forEach(item => {
+                            const combined = `${item.q} ${item.a}`;
+                            if (pattern.test(combined)) {
+                                records.push({
+                                    raw: `问：${item.q} | 答：${item.a || '未答'}`,
+                                    comp: comp?.name || '未知公司',
+                                    pos: pos?.title || '未知岗位',
+                                    round: iv.round,
+                                    date: iv.date
+                                });
+                            }
+                        });
+                    });
+                });
+                return records;
+            },
+
+            buildHighFrequencyQuestions() {
+                const counts = {};
+                const sourceMap = {};
+                this.data.interviews.forEach(iv => {
+                    const pos = this.data.positions.find(p => p.id === iv.positionId);
+                    const comp = pos ? this.getCompany(pos.companyId) : null;
+                    if (!iv.questions) return;
+                    
+                    const list = this.parseQuestions(iv.questions);
+                    list.forEach(item => {
+                        const q = item.q.trim();
+                        if (q.length < 4) return;
+                        counts[q] = (counts[q] || 0) + 1;
+                        if (!sourceMap[q]) sourceMap[q] = [];
+                        sourceMap[q].push(`${comp?.name || ''}·${iv.round}`);
+                    });
+                });
+                return Object.entries(counts)
+                    .sort((a,b) => b[1] - a[1])
+                    .slice(0, 6)
+                    .map(([q, count]) => ({ question: q, count, sources: sourceMap[q] }));
+            },
+
+            renderAnalytics() {
+                const total = this.data.positions.length;
+                
+                // 1. Funnel Computation
+                const stages = this.getAnalyticsStages();
+                const activeJobs = this.data.positions.filter(p => p.status !== '拒绝');
+                const getArrivedCount = (stage) => {
+                    const stageIdx = stages.indexOf(stage);
+                    return activeJobs.filter(p => {
+                        const pIdx = stages.indexOf(p.status);
+                        return pIdx >= stageIdx;
+                    }).length;
+                };
+
+                const funnelHtml = stages.slice(0, -1).map((s, i) => {
+                    const nextS = stages[i+1];
+                    const currCount = getArrivedCount(s);
+                    const nextCount = getArrivedCount(nextS);
+                    const rate = currCount ? Math.round((nextCount / currCount) * 100) : 0;
+                    return `<div class="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex flex-col justify-between space-y-2">
+                        <div class="flex justify-between items-center text-xs font-semibold">
+                            <span class="text-slate-600">${s} ➜ ${nextS}</span>
+                            <span class="text-brand-600 font-bold">${rate}% 转化率</span>
+                        </div>
+                        <div class="h-2 w-full bg-slate-200 rounded-full overflow-hidden shadow-inner">
+                            <div class="h-full bg-brand-500 rounded-full transition-all" style="width: ${rate}%"></div>
+                        </div>
+                        <div class="flex justify-between text-[10px] text-slate-400">
+                            <span>到达该级: ${currCount}</span>
+                            <span>晋级至下一轮: ${nextCount}</span>
+                        </div>
+                    </div>`;
+                }).join('');
+
+                // 2. High Frequency Questions
+                const questionsList = this.buildHighFrequencyQuestions();
+                const qHtml = questionsList.map(item => `
+                    <div class="p-3 bg-slate-50 border border-slate-100 rounded-xl space-y-1">
+                        <div class="flex justify-between text-xs font-semibold">
+                            <span class="text-slate-800">${this.escapeHTML(item.question)}</span>
+                            <span class="text-brand-600 font-bold shrink-0 bg-brand-50 border border-brand-100 px-2 py-0.5 rounded-md text-[10px]">考过 ${item.count} 次</span>
+                        </div>
+                        <div class="text-[10px] text-slate-400">${this.escapeHTML(item.sources.slice(0,3).join(' / '))}</div>
+                    </div>`).join('') || '<div class="text-center text-slate-400 py-6 text-xs">还没有积累足够多的面试复盘问题数据。</div>';
+
+                // 3. Blind Spots Diagnosis
+                const spots = this.buildKnowledgeBlindSpots();
+                const spotHtml = spots.map(item => `
+                    <div class="p-3 bg-rose-50/50 border border-rose-100/60 rounded-xl text-xs space-y-2">
+                        <p class="font-bold text-rose-800 leading-normal">${this.escapeHTML(item.raw)}</p>
+                        <div class="flex justify-between text-[10px] text-slate-400">
+                            <span>所属: ${this.escapeHTML(item.comp)} · ${this.escapeHTML(item.pos)}</span>
+                            <span>日期: ${this.escapeHTML(item.date)}</span>
+                        </div>
+                    </div>`).join('') || '<div class="text-center text-slate-400 py-6 text-xs">干得漂亮！暂无暴露出的薄弱或卡壳问题记录。</div>';
+
+                // 4. Emotional Radar / Mood Stats
+                const moods = { '紧张': 0, '平稳': 0, '超水平发挥': 0, '被问懵': 0, '一般': 0 };
+                this.data.interviews.forEach(iv => {
+                    const m = iv.mood || '一般';
+                    if (moods.hasOwnProperty(m)) moods[m]++;
+                });
+                const totalIvs = this.data.interviews.length || 1;
+                const moodColors = { '紧张': '#f59e0b', '平稳': '#2563eb', '超水平发挥': '#10b981', '被问懵': '#f43f5e', '一般': '#94a3b8' };
+                
+                const moodHtml = Object.entries(moods).map(([m, count]) => {
+                    const pct = Math.round((count / totalIvs) * 100);
+                    return `<div class="flex items-center justify-between text-xs font-semibold">
+                        <span class="w-20 text-slate-500">${m}</span>
+                        <div class="flex-grow bg-slate-50 h-3 rounded-full overflow-hidden mx-4 border">
+                            <div class="h-full rounded-full transition-all" style="width: ${pct}%; background-color: ${moodColors[m]}"></div>
+                        </div>
+                        <span class="w-12 text-right font-bold text-slate-700">${count}次 (${pct}%)</span>
+                    </div>`;
+                }).join('');
+
+                // 5. Build Comprehensive UI Structure
+                document.getElementById('analytics-grid').innerHTML = `
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        
+                        <!-- Main Funnel Panel -->
+                        <div class="bg-white border border-slate-100 p-6 rounded-3xl shadow-premium lg:col-span-2 space-y-4">
+                            <h3 class="font-extrabold text-slate-900 flex items-center gap-2 tracking-tight">
+                                <i data-lucide="line-chart" class="w-4 h-4 text-brand-500"></i>晋级转化核心漏斗
+                            </h3>
+                            ${activeJobs.length < 3 ? '<div class="p-3 bg-amber-50 text-amber-800 text-[11px] rounded-xl border border-amber-100">由于岗位投递样本量较少，漏斗分析目前仅作趋势参考。</div>' : ''}
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">${funnelHtml}</div>
+                        </div>
+
+                        <!-- Side Emotional Distribution Panel -->
+                        <div class="bg-white border border-slate-100 p-6 rounded-3xl shadow-premium space-y-4">
+                            <h3 class="font-extrabold text-slate-900 flex items-center gap-2 tracking-tight">
+                                <i data-lucide="smile" class="w-4 h-4 text-violet-500"></i>面试战况状态分布
+                            </h3>
+                            <div class="space-y-4.5 py-2">${moodHtml}</div>
+                        </div>
+
+                        <!-- Down High Freq Questions Panel -->
+                        <div class="bg-white border border-slate-100 p-6 rounded-3xl shadow-premium space-y-4 lg:col-span-2">
+                            <h3 class="font-extrabold text-slate-900 flex items-center gap-2 tracking-tight">
+                                <i data-lucide="brain-circuit" class="w-4 h-4 text-indigo-500"></i>考官最爱问：核心高频考点
+                            </h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">${qHtml}</div>
+                        </div>
+
+                        <!-- Down Diagnosed Gaps Panel -->
+                        <div class="bg-white border border-slate-100 p-6 rounded-3xl shadow-premium space-y-4">
+                            <h3 class="font-extrabold text-rose-800 flex items-center gap-2 tracking-tight">
+                                <i data-lucide="search-code" class="w-4 h-4 text-rose-500"></i>面试反馈盲区诊断
+                            </h3>
+                            <div class="space-y-3 max-h-[360px] overflow-y-auto">${spotHtml}</div>
+                        </div>
+
+                    </div>`;
+                lucide.createIcons();
+            },
+
+            renderSettings() {
+                const status = document.getElementById('firebase-status');
+                if (!status) return;
+
+                const user = FirebaseStore.getUser();
+                if (user) {
+                    status.innerHTML = `<div class="flex items-center gap-2 text-emerald-700 font-bold mb-1">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        已建立安全云通道
+                    </div>
+                    <span class="font-medium text-[11px]">云存储主账号：<strong>${user.email}</strong>。您的数据正在处于安全托管。</span>`;
+                } else {
+                    status.innerHTML = `<div class="text-amber-700 font-bold mb-1 flex items-center gap-1.5">
+                        ⚠ 未建立云备份连接
+                    </div>
+                    <span class="font-medium text-[11px]">数据目前仅托管于当前浏览器。推荐登录，避免浏览器缓存清理导致数据覆灭。</span>`;
+                }
+                this.updateSyncBadge();
+            },
+
+            async firebaseLogin() {
+                try {
+                    await FirebaseStore.signIn();
+                    this.renderSettings();
+                    this.updateSyncBadge();
+                    this.showToast('Google 安全授权登录成功！');
+                } catch (e) {
+                    this.showToast('安全通道建立失败：' + this.explainFirebaseError(e));
+                }
+            },
+
+            async firebaseLogout() {
+                try {
+                    await FirebaseStore.signOut();
+                    this.renderSettings();
+                    this.updateSyncBadge();
+                    this.showToast('已退出登录并切断云连接');
+                } catch (e) {
+                    this.showToast('断开通道失败：' + this.explainFirebaseError(e));
+                }
+            },
+
+            async uploadFirebase(options = {}) {
+                const silent = options.silent === true;
+                if (!FirebaseStore.getUser()) {
+                    if (!silent) {
+                        this.switchView('settings');
+                        this.showToast('检测到未完成登录，请点击“Google 登录”。');
+                    }
+                    return;
+                }
+
+                try {
+                    this.data = DataStore.get();
+                    await FirebaseStore.upload(DataStore.normalize(this.data));
+                    this.updateSyncBadge();
+                    if (!silent) this.showToast('本地作战进度全部上传并覆盖云端！');
+                } catch (e) {
+                    if (silent) console.error('云备份失败', e);
+                    else this.showToast('数据传送失败: ' + this.explainFirebaseError(e));
+                }
+            },
+
+            async downloadFirebase() {
+                if (!FirebaseStore.getUser()) return this.showToast('请先点击登录账号。');
+                
+                try {
+                    const remote = await FirebaseStore.download();
+                    if (!remote) return this.showToast('当前云账户下未查阅到备份。请点击“上传云端”。');
+                    
+                    if (confirm('重要提示：拉取云端数据会彻底覆盖本机数据。是否继续？')) {
+                        const data = DataStore.normalize(remote);
+                        data.config = { token: '', gistId: '' };
+                        DataStore.set(data);
+                        this.data = DataStore.get();
+                        this.render();
+                        this.updateSyncBadge();
+                        this.showToast('已拉取并恢复全部云同步进度数据！');
+                    }
+                } catch (e) {
+                    this.showToast('拉取失败：' + this.explainFirebaseError(e));
+                }
+            },
+
+            backgroundSync() {
+                this.updateSyncBadge();
+                if (FirebaseStore.getUser()) {
+                    this.uploadFirebase({ silent: true });
+                }
+            },
+
+            updateSyncBadge() {
+                const badgeText = document.getElementById('sync-badge-text');
+                const badgeDot = document.getElementById('sync-dot');
+                const mobileSyncDot = document.getElementById('mobile-sync-dot');
+                const mobileSyncText = document.getElementById('mobile-sync-text');
+                const avatar = document.getElementById('user-avatar');
+                const userMail = document.getElementById('user-display-email');
+                
+                const user = FirebaseStore.getUser();
+                if (user) {
+                    if (badgeText) badgeText.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>云端在线`;
+                    if (badgeDot) badgeDot.className = "w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse";
+                    if (mobileSyncDot) mobileSyncDot.className = "w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse";
+                    if (mobileSyncText) mobileSyncText.textContent = "云端在线";
+                    if (avatar) {
+                        avatar.innerHTML = `<img src="${user.photoURL || ''}" class="w-full h-full rounded-full border border-slate-200" onerror="this.outerHTML='👤'">`;
+                    }
+                    if (userMail) userMail.textContent = user.email || '';
+                } else {
+                    if (badgeText) badgeText.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>本地存储`;
+                    if (badgeDot) badgeDot.className = "w-1.5 h-1.5 rounded-full bg-slate-400";
+                    if (mobileSyncDot) mobileSyncDot.className = "w-1.5 h-1.5 rounded-full bg-slate-400";
+                    if (mobileSyncText) mobileSyncText.textContent = "本地存储";
+                    if (avatar) avatar.innerHTML = '👤';
+                    if (userMail) userMail.textContent = '未登录账号';
+                }
+            },
+
+            explainFirebaseError(error) {
+                const code = error?.code || '';
+                if (code.includes('auth/popup-blocked')) return '浏览器拦截了 Google 登录弹窗，请解除限制。';
+                if (code.includes('permission-denied')) return '云数据库拒绝访问，请重新登录配置规则路径安全组。';
+                return error?.message || String(error);
+            },
+
+            exportJSON() {
+                const exportData = DataStore.normalize(this.data);
+                exportData.config = { token: '', gistId: '' };
+                
+                // Strip raw document blob from files to optimize downloaded json size
+                exportData.resumes = exportData.resumes.map(r => {
+                    const { fileData, ...rest } = r;
+                    return rest;
+                });
+                
+                const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = `jobtracker_backup_${new Date().toISOString().split('T')[0]}.json`;
+                a.click();
+                URL.revokeObjectURL(a.href);
+                this.showToast('求职进度数据导出成功！');
+            },
+
+            importJSON(input) {
+                const file = input.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = e => {
+                    try {
+                        const data = DataStore.normalize(JSON.parse(e.target.result));
+                        data.config = { token: '', gistId: '' };
+                        if (confirm('警告：导入外部备份将完全洗去当前的本地数据。是否继续？')) {
+                            DataStore.set(data);
+                            this.data = DataStore.get();
+                            this.render();
+                            this.showToast('作战档案数据导入恢复完成！');
+                        }
+                    } catch (err) {
+                        this.showToast('无效的作战档案备份文件！');
+                    }
+                };
+                reader.readAsText(file);
+                input.value = '';
+            },
+
+            loadDemoData() {
+                if (!confirm('警告：此操作将重置现有求职进展并填入预设的演示数据。是否继续？')) return;
+                DataStore.loadDemo();
+                this.data = DataStore.get();
+                this.render();
+                this.showToast('模拟求职环境演练数据加载成功！');
+            },
+
+            clearAllData() {
+                if (!confirm('毁灭性高危提示：此操作将彻底销毁当前磁盘下所有的公司、岗位和面试笔记，并且不可逆。是否继续？')) return;
+                DataStore.clear();
+                this.data = DataStore.get();
+                this.render();
+                this.showToast('本地存储空间彻底抹去。');
+            },
+
+            openModal(type, id = null, presetCompanyId = '') {
+                // Ensure detail page modal closes safely
+                const detailBackdrop = document.getElementById('detail-backdrop');
+                if (detailBackdrop && !detailBackdrop.classList.contains('opacity-0')) {
+                    this.closeDetail();
+                }
+
+                const backdrop = document.getElementById('modal-backdrop');
+                const title = document.getElementById('modal-title');
+                const body = document.getElementById('modal-body');
+                const footer = document.getElementById('modal-footer');
+                
+                backdrop.classList.remove('opacity-0', 'pointer-events-none');
+                backdrop.firstElementChild.classList.remove('translate-y-8');
+
+                if (type === 'company') {
+                    title.textContent = id ? '编辑公司战线' : '添加目标公司';
+                    const c = id ? this.data.companies.find(x => x.id === id) : {};
+                    body.innerHTML = `<input type="hidden" id="m-company-id" value="${this.escapeHTML(id || '')}">
+                        <div class="space-y-1">
+                            <label class="text-xs font-bold text-slate-500">公司法定全称 / 常用呼称 *</label>
+                            <input id="m-c-name" value="${this.escapeHTML(c.name || '')}" class="w-full border px-3 py-2.5 rounded-xl text-sm focus:outline-none focus:border-brand-500" placeholder="例如：字节跳动">
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="space-y-1">
+                                <label class="text-xs font-bold text-slate-500">公司所属赛道</label>
+                                <input id="m-c-industry" value="${this.escapeHTML(c.industry || '')}" class="w-full border px-3 py-2.5 rounded-xl text-sm focus:outline-none focus:border-brand-500" placeholder="例如：互联网平台">
+                            </div>
+                            <div class="space-y-1">
+                                <label class="text-xs font-bold text-slate-500">企业规模级别</label>
+                                <select id="m-c-scale" class="w-full border px-3 py-2.5 rounded-xl text-sm bg-white focus:outline-none focus:border-brand-500">
+                                    <option value="">未知规模</option>
+                                    ${['初创','成长型','大厂','外企','国企'].map(s => `<option value="${s}" ${c.scale===s?'selected':''}>${s}</option>`).join('')}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="space-y-1">
+                                <label class="text-xs font-bold text-slate-500">公司总部核心城市</label>
+                                <input id="m-c-city" value="${this.escapeHTML(c.city || '')}" class="w-full border px-3 py-2.5 rounded-xl text-sm focus:outline-none focus:border-brand-500" placeholder="例如：北京">
+                            </div>
+                            <div class="space-y-1">
+                                <label class="text-xs font-bold text-slate-500">官方网申/企业网站 URL</label>
+                                <input id="m-c-website" value="${this.escapeHTML(c.website || '')}" class="w-full border px-3 py-2.5 rounded-xl text-sm focus:outline-none focus:border-brand-500" placeholder="以 https:// 开头">
+                            </div>
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-xs font-bold text-slate-500">公司背景备注</label>
+                            <textarea id="m-c-notes" rows="3" class="w-full border px-3 py-2.5 rounded-xl text-sm focus:outline-none focus:border-brand-500" placeholder="可记录内推人渠道等要点...">${this.escapeHTML(c.notes || '')}</textarea>
+                        </div>`;
+                    footer.innerHTML = `${id?'<button class="bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-bold px-4 py-2.5 rounded-xl transition-all" data-action="deleteCompany">彻底注销</button>':''}<div class="ml-auto flex gap-2"><button class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold px-4 py-2.5 rounded-xl border" data-action="closeModal">放弃</button><button class="bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-md transition-all" data-action="saveCompany">确认保存</button></div>`;
+                } else if (type === 'position') {
+                    const p = id ? (this.data.positions.find(x => x.id === id) || {}) : {};
+                    const isEdit = !!p.id;
+                    title.textContent = isEdit ? '编辑关联岗位' : '新增投递岗位';
+                    const companyId = p.companyId || presetCompanyId || this.data.companies[0]?.id || '';
+                    
+                    body.innerHTML = `<input type="hidden" id="m-pos-id" value="${this.escapeHTML(isEdit ? p.id : '')}">
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="space-y-1">
+                                <label class="text-xs font-bold text-slate-500">岗位名称 *</label>
+                                <input id="m-pos-title" value="${this.escapeHTML(p.title || '')}" class="w-full border px-3 py-2.5 rounded-xl text-sm focus:outline-none focus:border-brand-500" placeholder="例如：软件开发工程师">
+                            </div>
+                            <div class="space-y-1">
+                                <label class="text-xs font-bold text-slate-500">所属战略企业</label>
+                                <select id="m-pos-company" class="w-full border px-3 py-2.5 rounded-xl text-sm bg-white focus:outline-none focus:border-brand-500">
+                                    ${this.data.companies.map(c => `<option value="${this.escapeHTML(c.id)}" ${companyId===c.id?'selected':''}>${this.escapeHTML(c.name)}</option>`).join('')}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="space-y-1">
+                                <label class="text-xs font-bold text-slate-500">投递进度现状</label>
+                                <select id="m-pos-status" class="w-full border px-3 py-2.5 rounded-xl text-sm bg-white focus:outline-none focus:border-brand-500">
+                                    ${['未投递','投递','笔试','一面','二面','三面','HR面','Offer','拒绝','接受'].map(s => `<option value="${s}" ${p.status===s || (!isEdit && s==='未投递')?'selected':''}>${s}</option>`).join('')}
+                                </select>
+                            </div>
+                            <div class="space-y-1">
+                                <label class="text-xs font-bold text-slate-500">意愿优先级评级</label>
+                                <div class="star-rating py-1.5" id="m-pos-stars"></div>
+                                <input type="hidden" id="m-pos-priority" value="${this.escapeHTML(p.priority || 3)}">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="space-y-1">
+                                <label class="text-xs font-bold text-slate-500">就职工作地点</label>
+                                <input id="m-pos-location" value="${this.escapeHTML(p.location || '')}" class="w-full border px-3 py-2.5 rounded-xl text-sm focus:outline-none focus:border-brand-500" placeholder="例如：深圳">
+                            </div>
+                            <div class="space-y-1">
+                                <label class="text-xs font-bold text-slate-500">薪酬标准 / 期权范围</label>
+                                <input id="m-pos-salary" value="${this.escapeHTML(p.salary || '')}" class="w-full border px-3 py-2.5 rounded-xl text-sm focus:outline-none focus:border-brand-500" placeholder="例如：20K·15薪">
+                            </div>
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-xs font-bold text-slate-500">关联资料库特定材料</label>
+                            <select id="m-pos-resume" class="w-full border px-3 py-2.5 rounded-xl text-sm bg-white focus:outline-none focus:border-brand-500">
+                                <option value="">独立投递，不绑定专属简历材料</option>
+                                ${this.data.resumes.map(r => `<option value="${this.escapeHTML(r.id)}" ${p.resumeId===r.id?'selected':''}>${this.escapeHTML(r.name)} (${r.version || '最新版'})</option>`).join('')}
+                            </select>
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-xs font-bold text-slate-500">岗位招聘需求 (JD)</label>
+                            <textarea id="m-pos-jd" rows="4" class="w-full border px-3 py-2.5 rounded-xl text-sm focus:outline-none focus:border-brand-500" placeholder="可黏贴招聘JD、业务方向及团队定位...">${this.escapeHTML(p.jd || '')}</textarea>
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-xs font-bold text-slate-500">重要网申/笔试 Deadline 日期</label>
+                            <input type="date" id="m-pos-deadline" value="${this.escapeHTML(p.deadline || '')}" class="w-full border px-3 py-2.5 rounded-xl text-sm focus:outline-none focus:border-brand-500">
+                        </div>`;
+                    setTimeout(() => this.renderStarInput('m-pos-stars', 'm-pos-priority', p.priority || 3), 0);
+                    footer.innerHTML = `${isEdit?'<button class="bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-bold px-4 py-2.5 rounded-xl transition-all" data-action="deletePosition">撕毁岗位</button>':''}<div class="ml-auto flex gap-2"><button class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold px-4 py-2.5 rounded-xl border" data-action="closeModal">放弃</button><button class="bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-md transition-all" data-action="savePosition">确认保存</button></div>`;
+                } else if (type === 'resume') {
+                    title.textContent = id ? '编辑求职材料' : '新增专属材料';
+                    const r = id ? this.data.resumes.find(x => x.id === id) : {};
+                    const fileStatusDisplay = r.fileData ? `✓ 已托管附件: ${this.escapeHTML(r.fileName || '已存PDF')}` : '无本地托管附件（仅有文本版本）';
+                    
+                    body.innerHTML = `<input type="hidden" id="m-res-id" value="${this.escapeHTML(id || '')}">
+                        <div class="space-y-1">
+                            <label class="text-xs font-bold text-slate-500">专属材料命名 *</label>
+                            <input id="m-res-name" value="${this.escapeHTML(r.name || '')}" class="w-full border px-3 py-2.5 rounded-xl text-sm focus:outline-none focus:border-brand-500" placeholder="例如：Java开发-算法强化定制版">
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="space-y-1">
+                                <label class="text-xs font-bold text-slate-500">材料类型性质</label>
+                                <select id="m-res-type" class="w-full border px-3 py-2.5 rounded-xl text-sm bg-white focus:outline-none focus:border-brand-500">
+                                    ${['resume','intro','cover','other'].map(t => `<option value="${t}" ${r.type===t?'selected':''}>${t==='resume'?'专属简历':t==='intro'?'自我介绍':t==='cover'?'自荐求职信':'其他材料'}</option>`).join('')}
+                                </select>
+                            </div>
+                            <div class="space-y-1">
+                                <label class="text-xs font-bold text-slate-500">材料对口职能</label>
+                                <input id="m-res-target" value="${this.escapeHTML(r.target || '')}" class="w-full border px-3 py-2.5 rounded-xl text-sm focus:outline-none focus:border-brand-500" placeholder="例如：核心业务后端">
+                            </div>
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-xs font-bold text-slate-500">档案版本标示</label>
+                            <input id="m-res-version" value="${this.escapeHTML(r.version || 'v1.0')}" class="w-full border px-3 py-2.5 rounded-xl text-sm focus:outline-none focus:border-brand-500" placeholder="例如：v2.0-架构优化版">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-xs font-bold text-slate-500">档案核心大纲 / 自我介绍备注文本</label>
+                            <textarea id="m-res-content" rows="6" class="w-full border px-3 py-2.5 rounded-xl text-sm focus:outline-none focus:border-brand-500 font-mono" placeholder="可将核心亮点文本记录于此，一键复制在网申中极快提取...">${this.escapeHTML(r.content || '')}</textarea>
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-xs font-bold text-slate-500">上传原始简历 PDF/照片 备份</label>
+                            <input type="file" id="m-res-file-input" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif,.txt" class="block w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-brand-50 file:text-brand-700 hover:file:bg-brand-100" onchange="app.handleFileSelect(event)">
+                            <div id="file-status" class="text-[11px] text-slate-400 font-semibold">${fileStatusDisplay}</div>
+                        </div>
+                        <input type="hidden" id="m-res-file" value="${this.escapeHTML(r.fileName || '')}">
+                        <input type="hidden" id="m-res-file-data" value="">`;
+                    footer.innerHTML = `${id?'<button class="bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-bold px-4 py-2.5 rounded-xl transition-all" data-action="deleteResume">撕毁档案</button>':''}<div class="ml-auto flex gap-2"><button class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold px-4 py-2.5 rounded-xl border" data-action="closeModal">放弃</button><button class="bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-md transition-all" data-action="saveResume">确认保存</button></div>`;
+                } else if (type === 'interview') {
+                    const posId = id;
+                    const ivId = arguments[2] || null;
+                    const iv = ivId ? this.data.interviews.find(x => x.id === ivId) : {};
+                    this.modalQAs = this.parseQuestions(iv.questions || '');
+                    
+                    title.textContent = ivId ? '编辑面试复盘' : '记录本轮复盘笔记';
+                    body.innerHTML = `<input type="hidden" id="m-iv-id" value="${this.escapeHTML(ivId || '')}"><input type="hidden" id="m-iv-pos" value="${this.escapeHTML(posId || '')}">
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="space-y-1">
+                                <label class="text-xs font-bold text-slate-500">当前面试轮次</label>
+                                <select id="m-iv-round" class="w-full border px-3 py-2.5 rounded-xl text-sm bg-white focus:outline-none focus:border-brand-500">
+                                    ${['笔试','一面','二面','三面','HR面','其他'].map(r => `<option value="${r}" ${iv.round===r?'selected':''}>${r}</option>`).join('')}
+                                </select>
+                            </div>
+                            <div class="space-y-1">
+                                <label class="text-xs font-bold text-slate-500">面试开展日期</label>
+                                <input type="date" id="m-iv-date" value="${this.escapeHTML(iv.date || new Date().toISOString().split('T')[0])}" class="w-full border px-3 py-2.5 rounded-xl text-sm focus:outline-none focus:border-brand-500">
+                            </div>
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-xs font-bold text-slate-500">面试官姓名/性格特色</label>
+                            <input id="m-iv-interviewer" value="${this.escapeHTML(iv.interviewer || '')}" class="w-full border px-3 py-2.5 rounded-xl text-sm focus:outline-none focus:border-brand-500" placeholder="例如：王经理 (技术一派，注重底层逻辑)">
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="space-y-1 flex flex-col justify-center">
+                                <label class="text-xs font-bold text-slate-500">本轮自我实力估值</label>
+                                <div class="flex items-center gap-3 pt-2">
+                                    <input type="range" id="m-iv-rating" min="1" max="5" value="${this.escapeHTML(iv.selfRating || 3)}" class="flex-grow accent-brand-600" oninput="document.getElementById('rating-disp').textContent=this.value+'星'">
+                                    <span id="rating-disp" class="text-xs font-extrabold text-brand-600 shrink-0">${this.escapeHTML(iv.selfRating || 3)}星</span>
+                                </div>
+                            </div>
+                            <div class="space-y-1">
+                                <label class="text-xs font-bold text-slate-500">本轮复盘判定结果</label>
+                                <select id="m-iv-result" class="w-full border px-3 py-2.5 rounded-xl text-sm bg-white focus:outline-none focus:border-brand-500">
+                                    ${['待反馈','通过','挂','待定'].map(r => `<option value="${r}" ${iv.result===r?'selected':''}>${r}</option>`).join('')}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-xs font-bold text-slate-500">当场面试精神面貌 / 情绪状态</label>
+                            <div class="flex gap-1.5 flex-wrap pt-1">${['紧张','平稳','超水平发挥','被问懵','一般'].map(m => {
+                                const active = (iv.mood || '平稳') === m;
+                                return `<button type="button" class="mood-btn px-3 py-1.5 border rounded-xl text-xs font-semibold bg-white transition-all ${active ? 'border-brand-600 text-brand-600 bg-brand-50/55 font-bold shadow-sm' : 'text-slate-500 border-slate-200'}" onclick="app.setMoodBtn(this)" data-mood="${m}">${m}</button>`;
+                            }).join('')}</div>
+                            <input type="hidden" id="m-iv-mood" value="${this.escapeHTML(iv.mood || '平稳')}">
+                        </div>
+                        
+                        <!-- Structured Q&A Card Section (Upgraded to match and exceed image_e6f943.png design) -->
+                        <div class="space-y-4 border-t border-slate-100 pt-4" id="m-iv-qa-container">
+                            <div class="flex justify-between items-center">
+                                <span class="text-xs font-bold text-slate-500 flex items-center gap-1.5">
+                                    <i data-lucide="help-circle" class="w-4 h-4 text-slate-400"></i>真实追问与答辩实录
+                                </span>
+                                <button type="button" onclick="app.addModalQA()" class="bg-blue-50 hover:bg-blue-100 text-brand-600 text-[11px] font-bold px-3 py-1.5 rounded-xl transition-all flex items-center gap-1 border border-brand-100">
+                                    <i data-lucide="plus" class="w-3.5 h-3.5"></i>新增问答
+                                </button>
+                            </div>
+                            <div class="space-y-4" id="modal-qa-list"></div>
+                        </div>
+                        
+                        <div class="space-y-1">
+                            <label class="text-xs font-bold text-slate-500">硬实力薄弱盲区与下轮改进预盘</label>
+                            <textarea id="m-iv-notes" rows="4" class="w-full border px-3 py-2.5 rounded-xl text-sm focus:outline-none focus:border-brand-500" placeholder="记录卡壳原因、答题盲区。可备注带有【盲区】、【短板】等字眼，将自动汇入数据洞察诊断汇总...">${this.escapeHTML(iv.notes || '')}</textarea>
+                        </div>`;
+                    
+                    setTimeout(() => {
+                        this.renderModalQAList();
+                    }, 0);
+
+                    footer.innerHTML = `${ivId?'<button class="bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-bold px-4 py-2.5 rounded-xl transition-all" data-action="deleteInterview">作废复盘</button>':''}<div class="ml-auto flex gap-2"><button class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold px-4 py-2.5 rounded-xl border" data-action="closeModal">放弃</button><button class="bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-md transition-all" data-action="saveInterview">确认保存</button></div>`;
+                }
+                lucide.createIcons();
+            },
+
+            renderStarInput(containerId, inputId, value) {
+                const container = document.getElementById(containerId);
+                if (!container) return;
+                container.innerHTML = Array(5).fill(0).map((_,i) => `<span class="cursor-pointer text-base ${i < value ? 'text-amber-400' : 'text-slate-200'} transition-all hover:scale-125" onclick="app.setStar('${containerId}', '${inputId}', ${i+1})">★</span>`).join('');
+            },
+
+            setStar(containerId, inputId, val) {
+                document.getElementById(inputId).value = val;
+                this.renderStarInput(containerId, inputId, val);
+            },
+
+            setMoodBtn(btn) {
+                const container = btn.parentElement;
+                container.querySelectorAll('.mood-btn').forEach(b => {
+                    b.className = "mood-btn px-3 py-1.5 border rounded-xl text-xs font-semibold bg-white text-slate-500 border-slate-200 transition-all";
+                });
+                btn.className = "mood-btn px-3 py-1.5 border rounded-xl text-xs font-bold bg-brand-50/55 border-brand-600 text-brand-600 shadow-sm transition-all";
+                document.getElementById('m-iv-mood').value = btn.dataset.mood;
+            },
+
+            closeModal() {
+                const backdrop = document.getElementById('modal-backdrop');
+                backdrop.classList.add('opacity-0', 'pointer-events-none');
+                backdrop.firstElementChild.classList.add('translate-y-8');
+            },
+
+            saveCompany() {
+                const id = document.getElementById('m-company-id').value;
+                const name = document.getElementById('m-c-name').value.trim();
+                if (!name) return this.showToast('请输入目标公司名称！');
+                
+                const data = {
+                    name,
+                    industry: document.getElementById('m-c-industry').value.trim(),
+                    scale: document.getElementById('m-c-scale').value,
+                    city: document.getElementById('m-c-city').value.trim(),
+                    website: document.getElementById('m-c-website').value.trim(),
+                    notes: document.getElementById('m-c-notes').value.trim()
+                };
+                
+                if (id) DataStore.updateCompany(id, data);
+                else DataStore.addCompany(data);
+                
+                this.data = DataStore.get();
+                this.closeModal();
+                this.render();
+                this.backgroundSync();
+                this.showToast('公司信息保存成功');
+            },
+
+            deleteCompany() {
+                const id = document.getElementById('m-company-id').value;
+                if (!id || !confirm('高危警示：删除此公司，将连带清空该司名下所有的投递岗位记录、面试笔记。确认操作？')) return;
+                
+                const positionIds = this.data.positions.filter(p => p.companyId === id).map(p => p.id);
+                this.data.companies = this.data.companies.filter(c => c.id !== id);
+                this.data.positions = this.data.positions.filter(p => p.companyId !== id);
+                this.data.interviews = this.data.interviews.filter(i => !positionIds.includes(i.positionId));
+                this.data.activities = this.data.activities.filter(a => !positionIds.includes(a.positionId));
+                
+                DataStore.set(this.data);
+                this.data = DataStore.get();
+                this.closeModal();
+                this.render();
+                this.backgroundSync();
+                this.showToast('目标公司已被注销。');
+            },
+
+            savePosition() {
+                const id = document.getElementById('m-pos-id').value;
+                const title = document.getElementById('m-pos-title').value.trim();
+                const companyId = document.getElementById('m-pos-company').value;
+                if (!title || !companyId) return this.showToast('请填写岗位名称并指定目标企业！');
+                
+                const status = id ? document.getElementById('m-pos-status').value : (document.getElementById('m-pos-status').value || '未投递');
+                const data = {
+                    title, companyId, status,
+                    priority: parseInt(document.getElementById('m-pos-priority').value) || 3,
+                    location: document.getElementById('m-pos-location').value.trim(),
+                    salary: document.getElementById('m-pos-salary').value.trim(),
+                    resumeId: document.getElementById('m-pos-resume').value,
+                    jd: document.getElementById('m-pos-jd').value.trim(),
+                    deadline: document.getElementById('m-pos-deadline').value
+                };
+                
+                if (id) DataStore.updatePosition(id, data);
+                else DataStore.addPosition(data);
+                
+                this.data = DataStore.get();
+                this.closeModal();
+                this.render();
+                this.backgroundSync();
+                this.showToast('岗位设置保存成功');
+            },
+
+            deletePosition() {
+                const id = document.getElementById('m-pos-id').value;
+                if (!id || !confirm('确认撤销并清除此求职岗位信息？')) return;
+                DataStore.deletePosition(id);
+                this.data = DataStore.get();
+                this.closeModal();
+                this.render();
+                this.backgroundSync();
+                this.showToast('岗位已成功撤销。');
+            },
+
+            saveResume() {
+                const id = document.getElementById('m-res-id').value;
+                const name = document.getElementById('m-res-name').value.trim();
+                if (!name) return this.showToast('请输入专属档案的命名！');
+                
+                const newFileData = document.getElementById('m-res-file-data').value;
+                const existingResume = id ? this.data.resumes.find(r => r.id === id) : null;
+                
+                const data = {
+                    name,
+                    type: document.getElementById('m-res-type').value,
+                    target: document.getElementById('m-res-target').value.trim(),
+                    version: document.getElementById('m-res-version').value.trim(),
+                    content: document.getElementById('m-res-content').value.trim(),
+                    fileName: document.getElementById('m-res-file').value.trim(),
+                    fileData: newFileData || (existingResume?.fileData || '')
+                };
+                
+                if (id) DataStore.updateResume(id, data);
+                else DataStore.addResume(data);
+                
+                this.data = DataStore.get();
+                this.closeModal();
+                this.renderResumes();
+                this.backgroundSync();
+                this.showToast('求职材料同步成功！');
+            },
+
+            handleFileSelect(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+                
+                const maxSize = 4 * 1024 * 1024; // Limit to 4MB safely for localStorage
+                if (file.size > maxSize) {
+                    this.showToast('安全阻断：附件体积不能超过 4MB，避免撑爆本地缓存导致系统丢失！');
+                    event.target.value = '';
+                    return;
+                }
+                
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const fileData = e.target.result;
+                    document.getElementById('m-res-file').value = file.name;
+                    document.getElementById('m-res-file-data').value = fileData;
+                    document.getElementById('file-status').textContent = `✓ 简历档案读取就绪: ${file.name} (${(file.size / 1024).toFixed(1)}KB)`;
+                };
+                reader.readAsDataURL(file);
+            },
+
+            deleteResume() {
+                const id = document.getElementById('m-res-id').value;
+                if (!id || !confirm('确定从资料库撤销此档案？此操作无法撤销。')) return;
+                DataStore.deleteResume(id);
+                this.data = DataStore.get();
+                this.closeModal();
+                this.renderResumes();
+                this.backgroundSync();
+                this.showToast('档案已被移除。');
+            },
+
+            saveInterview() {
+                const id = document.getElementById('m-iv-id').value;
+                const posId = document.getElementById('m-iv-pos').value;
+                
+                // Serialize questions array to JSON string to save structure safely
+                const data = {
+                    positionId: posId,
+                    round: document.getElementById('m-iv-round').value,
+                    date: document.getElementById('m-iv-date').value,
+                    interviewer: document.getElementById('m-iv-interviewer').value.trim(),
+                    selfRating: parseInt(document.getElementById('m-iv-rating').value),
+                    result: document.getElementById('m-iv-result').value,
+                    questions: this.serializeQuestions(this.modalQAs),
+                    notes: document.getElementById('m-iv-notes').value.trim(),
+                    mood: document.getElementById('m-iv-mood').value
+                };
+                
+                if (id) DataStore.updateInterview(id, data);
+                else DataStore.addInterview(data);
+                
+                this.data = DataStore.get();
+                this.closeModal();
+                this.render();
+                this.backgroundSync();
+                
+                const detailBackdrop = document.getElementById('detail-backdrop');
+                if (detailBackdrop && !detailBackdrop.classList.contains('opacity-0')) {
+                    this.openDetail(posId);
+                }
+                this.showToast('考场复盘笔记归档完毕。');
+            },
+
+            deleteInterview() {
+                const id = document.getElementById('m-iv-id').value;
+                const posId = document.getElementById('m-iv-pos').value;
+                if (!id || !confirm('确认抹去本轮复盘笔记？')) return;
+                
+                DataStore.deleteInterview(id);
+                this.data = DataStore.get();
+                this.closeModal();
+                this.render();
+                this.backgroundSync();
+                
+                const detailBackdrop = document.getElementById('detail-backdrop');
+                if (detailBackdrop && !detailBackdrop.classList.contains('opacity-0')) {
+                    this.openDetail(posId);
+                }
+                this.showToast('面试复盘已撤销。');
+            },
+
+            openPositionModal(positionId = null, companyId = '') {
+                if (!positionId && this.data.companies.length === 0) {
+                    this.showToast('请先完成目标公司建档，再为其追加岗位！');
+                    this.openModal('company');
+                    return;
+                }
+                this.openModal('position', positionId, companyId);
+            },
+
+            openInterviewModal(positionId, interviewId = null) {
+                this.openModal('interview', positionId, interviewId);
+            },
+
+            editResume(id) {
+                this.openModal('resume', id);
+            },
+
+            openDetail(positionId) {
+                const p = this.data.positions.find(x => x.id === positionId);
+                if (!p) return;
+                this.currentDetail = p;
+                
+                const c = this.getCompany(p.companyId);
+                const r = this.data.resumes.find(x => x.id === p.resumeId);
+                const ivs = this.data.interviews.filter(i => i.positionId === p.id).sort((a,b) => new Date(b.date) - new Date(a.date));
+                const acts = this.data.activities.filter(a => a.positionId === p.id).sort((a,b) => new Date(b.date) - new Date(a.date));
+
+                document.getElementById('detail-logo').textContent = (c?.name || '公')[0];
+                document.getElementById('detail-title').textContent = p.title || '';
+                document.getElementById('detail-company').textContent = c?.name || '';
+
+                const stars = Array(5).fill(0).map((_,i) => i < p.priority ? '<span class="text-amber-400">★</span>' : '<span class="text-slate-200">★</span>').join('');
+                const safePositionId = this.inlineArg(p.id);
+                const website = this.safeURL(c?.website);
+                const pBadgeStyle = this.getBadgeStyle(p.status);
+
+                document.getElementById('detail-body').innerHTML = `
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <!-- Main Left Column -->
+                        <div class="lg:col-span-2 space-y-6">
+                            <div class="bg-white border border-slate-100 p-5 rounded-2xl shadow-premium space-y-3">
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <span class="border px-2.5 py-0.5 rounded-lg text-xs font-bold ${pBadgeStyle}">${this.escapeHTML(p.status)}</span>
+                                    <span class="bg-slate-50 border border-slate-100 text-slate-500 text-xs px-2.5 py-0.5 rounded-lg font-semibold">📍 ${this.escapeHTML(p.location || '全国')}</span>
+                                    <span class="bg-slate-50 border border-slate-100 text-slate-500 text-xs px-2.5 py-0.5 rounded-lg font-semibold">💰 ${this.escapeHTML(p.salary || '面议')}</span>
+                                    <div class="flex items-center gap-0.5">${stars}</div>
+                                </div>
+                                <div class="border-t border-slate-50 pt-3">
+                                    <h4 class="font-bold text-slate-800 text-xs mb-1.5 uppercase tracking-wider text-slate-400">岗位招聘需求 (JD)</h4>
+                                    <p class="text-xs text-slate-600 leading-relaxed bg-slate-50 p-4 rounded-xl whitespace-pre-wrap border border-slate-100/40">${this.escapeHTML(p.jd || 'HR暂未配置详细JD。')}</p>
+                                </div>
+                            </div>
+
+                            <!-- Timeline of activities -->
+                            <div class="bg-white border border-slate-100 p-5 rounded-2xl shadow-premium space-y-4">
+                                <div class="flex justify-between items-center">
+                                    <h4 class="font-bold text-slate-800 text-xs uppercase text-slate-400">推进生命线</h4>
+                                    <button class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-bold px-2.5 py-1.5 rounded-lg flex items-center gap-1 transition-all" onclick="app.openInterviewModal('${safePositionId}')">
+                                        + 追加复盘笔记
+                                    </button>
+                                </div>
+                                <div class="relative pl-6 space-y-6 before:content-[''] before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-100">
+                                    ${acts.map(a => `
+                                        <div class="relative">
+                                            <span class="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-white border-2 border-brand-500 shadow-sm"></span>
+                                            <div class="space-y-1">
+                                                <div class="flex items-center gap-2 text-xs font-semibold">
+                                                    <span class="font-bold text-slate-800">${this.escapeHTML(a.type)}</span>
+                                                    <span class="text-[10px] text-slate-400 font-mono">${this.escapeHTML(a.date)}</span>
+                                                </div>
+                                                ${a.notes ? `<p class="text-xs text-slate-400 leading-normal pl-2 border-l-2 border-slate-50">${this.escapeHTML(a.notes)}</p>` : ''}
+                                            </div>
+                                        </div>
+                                    `).join('') || '<div class="text-center py-6 text-xs text-slate-400">暂无历史活动记录</div>'}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Side Right Column -->
+                        <div class="space-y-6">
+                            <!-- Company Card -->
+                            <div class="bg-white border border-slate-100 p-5 rounded-2xl shadow-premium space-y-3 text-xs">
+                                <h4 class="font-bold text-slate-400 uppercase text-[10px] tracking-wider">企业情报</h4>
+                                <div class="space-y-2">
+                                    <div class="flex justify-between font-semibold">
+                                        <span class="text-slate-400">行业赛道</span>
+                                        <span class="text-slate-700">${this.escapeHTML(c?.industry || '-')}</span>
+                                    </div>
+                                    <div class="flex justify-between font-semibold font-semibold">
+                                        <span class="text-slate-400">企业规模</span>
+                                        <span class="text-slate-700">${this.escapeHTML(c?.scale || '-')}</span>
+                                    </div>
+                                    <div class="flex justify-between font-semibold">
+                                        <span class="text-slate-400">官方网址</span>
+                                        <span class="font-bold">
+                                            ${website !== '#' ? `<a href="${this.escapeHTML(website)}" target="_blank" class="text-brand-600 hover:underline">点击查阅 ➜</a>` : '-'}
+                                        </span>
+                                    </div>
+                                </div>
+                                ${c?.notes ? `<p class="text-[11px] text-slate-400 leading-relaxed border-t border-slate-50 pt-2.5 mt-2 whitespace-pre-wrap font-medium">${this.escapeHTML(c.notes)}</p>` : ''}
+                            </div>
+
+                            <!-- Attached Resume Version -->
+                            <div class="bg-white border border-slate-100 p-5 rounded-2xl shadow-premium space-y-3">
+                                <h4 class="font-bold text-slate-400 uppercase text-[10px] tracking-wider">投递档案挂载</h4>
+                                ${r ? `
+                                    <div class="flex items-center justify-between p-3 bg-slate-50 rounded-xl text-xs">
+                                        <div class="flex items-center gap-2.5 min-w-0 font-semibold">
+                                            <span class="text-xl">📄</span>
+                                            <div class="min-w-0">
+                                                <h5 class="font-bold text-slate-800 truncate">${this.escapeHTML(r.name)}</h5>
+                                                <p class="text-[10px] text-slate-400">${this.escapeHTML(r.version || 'v1.0')}</p>
+                                            </div>
+                                        </div>
+                                        ${r.fileData ? `
+                                            <div class="flex gap-1 shrink-0">
+                                                <button class="p-1.5 hover:bg-white border rounded-lg transition-all" onclick="app.previewFile('${this.inlineArg(r.id)}')">👁️</button>
+                                                <button class="p-1.5 hover:bg-white border rounded-lg transition-all" onclick="app.downloadFile('${this.inlineArg(r.id)}', '${this.escapeJSString(r.fileName || 'file')}')">⬇️</button>
+                                            </div>` : ''}
+                                    </div>
+                                ` : '<div class="text-slate-400 py-3 text-center text-xs">本次投递未绑定特定定制材料</div>'}
+                            </div>
+
+                            <!-- Interview Round Lists (With Conversational Q&A Cards matching user feedback) -->
+                            <div class="bg-white border border-slate-100 p-5 rounded-2xl shadow-premium space-y-3">
+                                <h4 class="font-bold text-slate-400 uppercase text-[10px] tracking-wider">考场情报与答辩实录</h4>
+                                <div class="space-y-3">
+                                    ${ivs.map(i => {
+                                        const parsedQA = this.parseQuestions(i.questions);
+                                        const qaBubbles = parsedQA.map(qa => `
+                                            <div class="p-3 bg-white border border-slate-100 rounded-xl space-y-2 shadow-sm">
+                                                <div class="flex gap-2">
+                                                    <span class="bg-brand-50 text-brand-600 text-[9px] font-black px-1.5 py-0.5 rounded-md shrink-0 h-fit">Q</span>
+                                                    <p class="text-[11px] text-slate-700 font-bold leading-relaxed">${this.escapeHTML(qa.q)}</p>
+                                                </div>
+                                                ${qa.a ? `
+                                                <div class="flex gap-2 border-t border-slate-50 pt-1.5 mt-1.5">
+                                                    <span class="bg-emerald-50 text-emerald-600 text-[9px] font-black px-1.5 py-0.5 rounded-md shrink-0 h-fit">A</span>
+                                                    <p class="text-[11px] text-slate-600 leading-relaxed font-semibold">${this.escapeHTML(qa.a)}</p>
+                                                </div>` : ''}
+                                            </div>
+                                        `).join('');
+
+                                        return `
+                                        <div class="p-3 bg-slate-50/60 border border-slate-100 hover:border-brand-300 rounded-xl transition-all cursor-pointer text-xs space-y-3" onclick="event.stopPropagation();app.openInterviewModal('${safePositionId}', '${this.inlineArg(i.id)}')">
+                                            <div class="flex justify-between items-center font-bold">
+                                                <span class="text-slate-800 text-xs">${this.escapeHTML(i.round)}</span>
+                                                <span class="shrink-0 text-[10px] px-2 py-0.5 rounded-full ${i.result==='通过'?'bg-emerald-50 text-emerald-600':i.result==='挂'?'bg-rose-50 text-rose-600':'bg-amber-50 text-amber-600'}">${this.escapeHTML(i.result)}</span>
+                                            </div>
+                                            
+                                            <!-- Thread list of QAs inside the detail card -->
+                                            <div class="space-y-2">
+                                                ${qaBubbles || '<p class="text-slate-400 text-[10px] text-center italic py-2">暂无详细问答笔记记录</p>'}
+                                            </div>
+
+                                            <div class="flex justify-between items-center text-[10px] text-slate-400 pt-2 border-t border-slate-100 font-semibold">
+                                                <span>面试官: ${this.escapeHTML(i.interviewer || '匿名官')}</span>
+                                                <span class="bg-brand-50 border border-brand-100 text-brand-700 px-2 py-0.5 rounded-md">${this.escapeHTML(i.mood || '平稳')}</span>
+                                            </div>
+                                        </div>`;
+                                    }).join('') || '<div class="text-slate-400 py-4 text-center text-xs">暂无考场笔记复盘</div>'}
+                                </div>
+                            </div>
+                        </div>
+                    </div>`;
+
+                const backdrop = document.getElementById('detail-backdrop');
+                backdrop.classList.remove('opacity-0', 'pointer-events-none');
+                backdrop.firstElementChild.classList.remove('translate-y-8');
+            },
+
+            closeDetail() {
+                const backdrop = document.getElementById('detail-backdrop');
+                backdrop.classList.add('opacity-0', 'pointer-events-none');
+                backdrop.firstElementChild.classList.add('translate-y-8');
+                this.currentDetail = null;
+            },
+
+            openPrepSheet() {
+                if (!this.currentDetail) return;
+                const p = this.currentDetail;
+                const c = this.getCompany(p.companyId);
+                const r = this.data.resumes.find(x => x.id === p.resumeId);
+                const ivs = this.data.interviews.filter(i => i.positionId === p.id).sort((a,b) => new Date(b.date) - new Date(a.date));
+                const allQAs = ivs.flatMap(i => this.parseQuestions(i.questions));
+                const prepNoteKey = `prep_notes_${c?.id || 'unknown'}*${p.id}`;
+                const savedPrepNote = localStorage.getItem(prepNoteKey) || '';
+                
+                const safeTitle = `${this.escapeHTML(c?.name || '')} · ${this.escapeHTML(p.title || '')}`;
+                const safePrepNoteKey = this.escapeJSString(prepNoteKey);
+                const safePrepNote = this.escapeHTML(savedPrepNote);
+
+                // Open a beautiful new tab specifically optimized for distraction-free printing & preparation
+                const win = window.open('', '_blank');
+                win.document.write(`<!DOCTYPE html><html><head><title>面试准备包 - ${safeTitle}</title>` + 
+                    `<scr` + `ipt src="https://cdn.tailwindcss.com"></scr` + `ipt>` + 
+                    `<style>@media print{.no-print{display:none !important;}.print-break{page-break-before:always;}}</style></head><body class="bg-slate-50 text-slate-800 p-6 md:p-12"><div class="max-w-3xl mx-auto space-y-6"><div class="flex justify-between items-center border-b pb-6 no-print"><div><h1 class="text-2xl font-black text-slate-900">${safeTitle} 面试通关准备包</h1><p class="text-xs text-slate-400 mt-1 font-semibold">系统生成于 ${new Date().toLocaleDateString('zh-CN')}</p></div><button onclick="window.print()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-md transition-all flex items-center gap-1.5">🖨️ 打印 / 存PDF</button></div><div class="grid grid-cols-1 md:grid-cols-2 gap-4"><div class="bg-white border rounded-2xl p-5 space-y-2"><h3 class="font-extrabold text-slate-950 text-sm">🏢 企业基础情报</h3><div class="text-xs text-slate-500 space-y-1 font-semibold"><p>公司：${this.escapeHTML(c?.name||'-')}</p><p>行业：${this.escapeHTML(c?.industry||'-')}</p><p>规模：${this.escapeHTML(c?.scale||'-')}</p><p>薪资：${this.escapeHTML(p.salary||'-')}</p></div></div><div class="bg-white border rounded-2xl p-5 space-y-2"><h3 class="font-extrabold text-slate-950 text-sm">🎯 挂接岗位 JD</h3><p class="text-xs text-slate-500 leading-relaxed whitespace-pre-wrap font-semibold">${this.escapeHTML(p.jd || '未配置岗位需求描述。')}</p></div></div>${r ? `<div class="bg-white border rounded-2xl p-6 space-y-3"><h3 class="font-extrabold text-slate-950 text-sm">📄 绑定简历挂载亮点</h3><p class="text-xs text-slate-500 leading-relaxed font-mono whitespace-pre-wrap bg-slate-50 p-4 rounded-xl border">${this.escapeHTML(r.content || '暂无')}</p></div>` : ''}${allQAs.length ? `<div class="bg-white border rounded-2xl p-6 space-y-3"><h3 class="font-extrabold text-slate-950 text-sm">💡 历史考场高频与答辩实录</h3><div class="space-y-3">${allQAs.map((qa, index) => `<div class="bg-slate-50 p-3.5 rounded-xl border border-slate-100 text-xs"><div class="flex gap-2 font-bold text-slate-900 mb-1.5"><span>Q${index+1}:</span><p>${this.escapeHTML(qa.q)}</p></div>${qa.a ? `<div class="flex gap-2 text-slate-600 pl-4 border-l-2 border-brand-200 font-semibold"><span>答:</span><p class="italic">${this.escapeHTML(qa.a)}</p></div>` : ''}</div>`).join('')}</div></div>` : ''}<!-- Interactive Smart Temp Study Pad --><div class="bg-blue-50/40 border border-blue-200 rounded-2xl p-6 space-y-3 no-print"><h3 class="font-extrabold text-brand-900 text-sm flex items-center gap-2">✍️ 面前热身笔记与速记白板</h3><p class="text-xs text-brand-700 leading-normal font-semibold">临考前的重点记忆重点，在此处记录将直接自动保存并同步至当前浏览器本地。</p><textarea id="prep-note-area" class="w-full h-40 border border-brand-200 rounded-xl p-3 text-xs focus:outline-none focus:border-brand-500 bg-white leading-relaxed font-semibold" placeholder="例如：自我介绍时一定要强调自己在高并发中间件上主导的核心成果！...">${safePrepNote}</textarea><div id="prep-note-status" class="text-[10px] text-brand-600 font-bold">档案已进入本地沙盒，无需手动保存</div></div>` + 
+                    `<scr` + `ipt>const key = '${safePrepNoteKey}';const area = document.getElementById('prep-note-area');const status = document.getElementById('prep-note-status');let timer;area.addEventListener('input', () => {clearTimeout(timer);status.textContent = '⏱️ 正在自动写入磁盘...';timer = setTimeout(() => {localStorage.setItem(key, area.value);status.textContent = '✓ 核心数据保存完成 - ' + new Date().toLocaleTimeString();}, 400);});</scr` + `ipt></div></body></html>`);
+                win.document.close();
+            },
+
+            getCompany(id) {
+                return this.data.companies.find(c => c.id === id);
+            }
+        };
+
+        // Inject App instance into window for direct HTML onClick triggers
+        window.app = app;
+        document.addEventListener('DOMContentLoaded', () => app.init());
+    </script>
+</body>
+</html>

@@ -452,10 +452,9 @@ const app = {
                     const positionId = this.inlineArg(p.id);
                     const positionBadgeClass = this.safeBadgeClass(p.status);
                     return `<div class="card position-card" onclick="event.stopPropagation();app.openDetail('${positionId}')">
-                        <div class="card-header">
-                            <div class="card-title">
-                                <div class="card-logo">${this.escapeHTML((c?.name || '公')[0])}</div>
-                                <div><div class="card-name">${this.escapeHTML(c?.name || '未知')}</div><div class="card-role">${this.escapeHTML(p.title)}</div></div>
+                        <div class="card-header position-card-header">
+                            <div class="position-title-wrap">
+                                <div class="card-role position-title">${this.escapeHTML(p.title)}</div>
                             </div>
                             <span class="activity-badge badge-${positionBadgeClass}">${this.escapeHTML(p.status)}</span>
                         </div>
@@ -464,10 +463,10 @@ const app = {
                         ${r ? `<div class="card-resume">📄 ${this.escapeHTML(r.name)}</div>` : ''}
                         <div class="card-footer">
                             <span class="card-footer-text">${last ? `最近: ${this.escapeHTML(last.round)}${last.formatNote || last.interviewFormatNote ? ` · ${this.escapeHTML(last.formatNote || last.interviewFormatNote)}` : ''} ${this.escapeHTML(last.date)}` : '暂无面试'}</span>
-                            <div class="card-actions">
-                                <button class="card-btn" onclick="event.stopPropagation();app.openPositionModal('${positionId}')">编辑</button>
-                                <button class="card-btn" onclick="event.stopPropagation();app.advance('${positionId}')">推进</button>
-                                <button class="card-btn" onclick="event.stopPropagation();app.openInterviewModal('${positionId}')">记</button>
+                            <div class="card-actions position-actions">
+                                <button class="card-btn card-btn-edit" onclick="event.stopPropagation();app.openPositionModal('${positionId}')">编辑</button>
+                                <button class="card-btn card-btn-advance" onclick="event.stopPropagation();app.advance('${positionId}')">推进</button>
+                                <button class="card-btn card-btn-note" onclick="event.stopPropagation();app.openInterviewModal('${positionId}')">记</button>
                             </div>
                         </div>
                     </div>`;
