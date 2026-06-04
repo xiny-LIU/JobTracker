@@ -1646,18 +1646,19 @@ const app = {
             const formatNote = i.formatNote || i.interviewFormatNote || '';
             return `<div class="interview-record-card" onclick="event.stopPropagation();app.openInterviewModal('${safePositionId}', '${this.inlineArg(i.id)}')">
                 <div class="interview-record-header">
-                    <div>
+                    <div class="interview-title-block">
                         <div class="interview-round-title">${this.escapeHTML(i.round || '面试')}</div>
                         <div class="interview-date-text">${this.escapeHTML(i.date || '未填写日期')}</div>
                     </div>
-                    <span class="interview-result-badge ${i.result==='通过'?'pass':i.result==='挂'?'fail':'pending'}">${this.escapeHTML(i.result || '待反馈')}</span>
-                </div>
-                <div class="interview-record-footer">
-                    <span>面试官：${this.escapeHTML(i.interviewer || '未知')}</span>
-                    ${formatNote ? `<span>形式：${this.escapeHTML(formatNote)}</span>` : ''}
-                    <span>心情：${this.escapeHTML(i.mood || '未记录')}</span>
-                    <span>结果：${this.escapeHTML(i.result || '待反馈')}</span>
-                    <span>评分：${this.escapeHTML(i.selfRating || '-')}/5</span>
+                    <div class="interview-header-right">
+                        <div class="interview-header-meta">
+                            <span class="interview-meta-chip">面试官：${this.escapeHTML(i.interviewer || '未知')}</span>
+                            ${formatNote ? `<span class="interview-meta-chip">形式：${this.escapeHTML(formatNote)}</span>` : ''}
+                            <span class="interview-meta-chip">心情：${this.escapeHTML(i.mood || '未记录')}</span>
+                            <span class="interview-meta-chip">评分：${this.escapeHTML(i.selfRating || '-')}/5</span>
+                        </div>
+                        <span class="interview-result-badge ${i.result==='通过'?'pass':i.result==='挂'?'fail':'pending'}">${this.escapeHTML(i.result || '待反馈')}</span>
+                    </div>
                 </div>
                 ${this.renderQAPairsReadOnly(i)}
                 ${i.notes ? `<div class="interview-notes-preview">${this.renderMarkdown(i.notes)}</div>` : ''}
