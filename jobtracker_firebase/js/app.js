@@ -726,14 +726,18 @@ const app = {
     },
 
     renderQAPairEditor(pairs = []) {
-        const qaPairs = pairs.length ? pairs : [{ id: this.createQAPairId(), question: '', answer: '', tags: [] }];
-        return qaPairs.map(pair => this.renderQAPairEditorItem(pair)).join('');
+        if (!pairs.length) return this.renderQAEmptyState();
+        return pairs.map(pair => this.renderQAPairEditorItem(pair)).join('');
+    },
+
+    renderQAEmptyState() {
+        return '<div class="qa-editor-empty">暂无追问记录，请点击右上角新增问答</div>';
     },
 
     renderQAPairEditorItem(pair = {}) {
         const tagsText = Array.isArray(pair.tags) ? pair.tags.join(', ') : (pair.tags || '');
         return `<div class="qa-editor-card" data-qa-id="${this.escapeHTML(pair.id || this.createQAPairId())}" data-created-at="${this.escapeHTML(pair.createdAt || '')}">
-            <button type="button" class="qa-delete-btn" onclick="app.removeQAPair(this)">删除</button>
+            <button type="button" class="qa-delete-btn" onclick="app.removeQAPair(this)" title="删除此问答" aria-label="删除此问答">×</button>
             <div class="qa-editor-block qa-editor-question">
                 <div class="qa-editor-label"><span class="qa-label qa-label-q">Q</span><span>问题 / 追问</span></div>
                 <textarea class="qa-question" rows="2" placeholder="例如：请介绍一个你做过的复杂项目">${this.escapeHTML(pair.question || '')}</textarea>
@@ -756,6 +760,8 @@ const app = {
     addQAPair() {
         const list = document.getElementById('qa-pair-list');
         if (!list) return;
+        const empty = list.querySelector('.qa-editor-empty');
+        if (empty) empty.remove();
         list.insertAdjacentHTML('beforeend', this.renderQAPairEditorItem({ id: this.createQAPairId(), question: '', answer: '', tags: [] }));
     },
 
@@ -764,9 +770,8 @@ const app = {
         if (!card) return;
         const list = document.getElementById('qa-pair-list');
         if (list && list.querySelectorAll('.qa-editor-card').length <= 1) {
-            card.querySelector('.qa-question').value = '';
-            card.querySelector('.qa-answer').value = '';
-            card.querySelector('.qa-tags').value = '';
+            card.remove();
+            list.innerHTML = this.renderQAEmptyState();
             return;
         }
         card.remove();
@@ -1351,7 +1356,7 @@ const app = {
                 }).join('')}</div><input type="hidden" id="m-iv-mood" value="${this.escapeHTML(iv.mood || '平稳')}"></div>
                 <label class="checkbox-row"><input type="checkbox" id="m-iv-sync-status" ${syncChecked ? 'checked' : ''}> 同步更新岗位主进度</label>
                 <div class="form-group">
-                    <div class="qa-section-head"><label>面试问答</label><button type="button" class="card-btn" onclick="app.addQAPair()">新增问答</button></div>
+                    <div class="qa-section-head"><label>真实追问与答辩实录</label><button type="button" class="card-btn" onclick="app.addQAPair()">+ 新增问答</button></div>
                     <div id="qa-pair-list" class="qa-editor-list">${this.renderQAPairEditor(qaPairs)}</div>
                     <input type="hidden" id="m-iv-questions" value="${this.escapeHTML(iv.questions || '')}">
                 </div>
