@@ -734,9 +734,18 @@ const app = {
         const tagsText = Array.isArray(pair.tags) ? pair.tags.join(', ') : (pair.tags || '');
         return `<div class="qa-editor-card" data-qa-id="${this.escapeHTML(pair.id || this.createQAPairId())}" data-created-at="${this.escapeHTML(pair.createdAt || '')}">
             <button type="button" class="qa-delete-btn" onclick="app.removeQAPair(this)">删除</button>
-            <div class="form-group"><label>问题</label><textarea class="qa-question" rows="2" placeholder="例如：请介绍一个你做过的复杂项目">${this.escapeHTML(pair.question || '')}</textarea></div>
-            <div class="form-group"><label>回答</label><textarea class="qa-answer" rows="3" placeholder="记录你的回答、追问或复盘要点">${this.escapeHTML(pair.answer || '')}</textarea></div>
-            <div class="form-group"><label>标签</label><input class="qa-tags" placeholder="算法, 项目, 职业规划" value="${this.escapeHTML(tagsText)}"></div>
+            <div class="qa-editor-block qa-editor-question">
+                <div class="qa-editor-label"><span class="qa-label qa-label-q">Q</span><span>问题 / 追问</span></div>
+                <textarea class="qa-question" rows="2" placeholder="例如：请介绍一个你做过的复杂项目">${this.escapeHTML(pair.question || '')}</textarea>
+            </div>
+            <div class="qa-editor-block qa-editor-answer">
+                <div class="qa-editor-label"><span class="qa-label qa-label-a">A</span><span>现场回答 / 优化答案</span></div>
+                <textarea class="qa-answer" rows="3" placeholder="记录你的回答、追问或复盘要点">${this.escapeHTML(pair.answer || '')}</textarea>
+            </div>
+            <div class="qa-editor-block qa-editor-tags">
+                <div class="qa-editor-label"><span>标签</span></div>
+                <input class="qa-tags" placeholder="算法, 项目, 职业规划" value="${this.escapeHTML(tagsText)}">
+            </div>
         </div>`;
     },
 
@@ -785,10 +794,10 @@ const app = {
         const pairs = this.normalizeInterviewQAPairs(interview);
         if (!pairs.length) return '';
         const limit = options.limit || pairs.length;
-        return `<div class="qa-readonly-list">${pairs.slice(0, limit).map(pair => `
-            <div class="qa-readonly-card">
-                ${pair.question ? `<div class="qa-readonly-question">Q：${this.escapeHTML(pair.question)}</div>` : ''}
-                ${pair.answer ? `<div class="qa-readonly-answer"><span>A：</span>${this.renderMarkdown(pair.answer)}</div>` : ''}
+        return `<div class="qa-thread-list">${pairs.slice(0, limit).map(pair => `
+            <div class="qa-pair">
+                ${pair.question ? `<div class="qa-bubble qa-bubble-question"><div class="qa-label qa-label-q">Q</div><div class="qa-content">${this.escapeHTML(pair.question)}</div></div>` : ''}
+                <div class="qa-bubble qa-bubble-answer"><div class="qa-label qa-label-a">A</div><div class="qa-content">${pair.answer ? this.renderMarkdown(pair.answer) : '<span class="qa-empty-answer">暂无回答</span>'}</div></div>
                 ${pair.tags?.length ? `<div class="qa-readonly-tags">${pair.tags.map(tag => `<span>${this.escapeHTML(tag)}</span>`).join('')}</div>` : ''}
             </div>`).join('')}</div>`;
     },
@@ -1600,13 +1609,25 @@ const app = {
         const badgeClass = this.safeBadgeClass(p.status);
         const interviewDetailHtml = ivs.map(i => {
             const formatNote = i.formatNote || i.interviewFormatNote || '';
-            return `<div class="interview-card interview-card-expanded" onclick="event.stopPropagation();app.openInterviewModal('${safePositionId}', '${this.inlineArg(i.id)}')">
-                <div class="interview-header"><span class="interview-round">${this.escapeHTML(i.round)}</span><span class="interview-result ${i.result==='通过'?'pass':i.result==='挂'?'fail':'pending'}">${this.escapeHTML(i.result)}</span></div>
-                <div class="interview-meta">${this.escapeHTML(i.date)} · ${this.escapeHTML(i.interviewer||'未知')}${formatNote ? ` · ${this.escapeHTML(formatNote)}` : ''}</div>
-                <div class="interview-tags"><span class="tag tag-mood">${this.escapeHTML(i.mood)}</span><span class="tag tag-rating">${this.escapeHTML(i.selfRating)}星</span></div>
+            return `<div class="interview-record-card" onclick="event.stopPropagation();app.openInterviewModal('${safePositionId}', '${this.inlineArg(i.id)}')">
+                <div class="interview-record-header">
+                    <div>
+                        <div class="interview-round-title">${this.escapeHTML(i.round || '面试')}</div>
+                        <div class="interview-date-text">${this.escapeHTML(i.date || '未填写日期')}</div>
+                    </div>
+                    <span class="interview-result-badge ${i.result==='通过'?'pass':i.result==='挂'?'fail':'pending'}">${this.escapeHTML(i.result || '待反馈')}</span>
+                </div>
                 ${this.renderQAPairsReadOnly(i, { limit: 4 })}
+                ${i.notes ? `<div class="interview-notes-preview">${this.renderMarkdown(i.notes)}</div>` : ''}
+                <div class="interview-record-footer">
+                    <span>面试官：${this.escapeHTML(i.interviewer || '未知')}</span>
+                    ${formatNote ? `<span>形式：${this.escapeHTML(formatNote)}</span>` : ''}
+                    <span>心情：${this.escapeHTML(i.mood || '未记录')}</span>
+                    <span>结果：${this.escapeHTML(i.result || '待反馈')}</span>
+                    <span>评分：${this.escapeHTML(i.selfRating || '-')}/5</span>
+                </div>
             </div>`;
-        }).join('') || '<div style="font-size:13px;color:#94a3b8;">暂无记录</div>';
+        }).join('') || '<div class="interview-empty-state"><strong>暂无面试记录</strong><span>点击“记”或“新增面试”记录你的第一次面试复盘</span></div>';
         document.getElementById('detail-body').innerHTML = `
             <div class="detail-main">
                 <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">
@@ -1660,7 +1681,7 @@ const app = {
         }).join('')}` : '';
 
         const win = window.open('', '_blank');
-        win.document.write(`<html><head><title>面试准备包 - ${safeTitle}</title><style>body{font-family:-apple-system,sans-serif;max-width:800px;margin:40px auto;padding:0 20px;color:#1e293b;line-height:1.6;}h1{font-size:24px;border-bottom:2px solid #e2e8f0;padding-bottom:12px;}h2{font-size:16px;color:#3b82f6;margin-top:24px;}.box{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px;margin:12px 0;font-size:14px;}.box strong{color:#0f172a;}ul{margin:8px 0;padding-left:20px;}li{margin:4px 0;}.print-btn{position:fixed;top:20px;right:20px;padding:8px 16px;background:#3b82f6;color:white;border:none;border-radius:6px;cursor:pointer;}.prep-note-box{border-style:dashed;background:#fffdf7;}.prep-note-area{width:100%;min-height:140px;border:0;background:transparent;resize:vertical;font:inherit;color:#1e293b;line-height:1.6;outline:none;}.prep-note-status{font-size:12px;color:#64748b;margin-top:8px;}.qa-readonly-card{background:white;border:1px solid #e2e8f0;border-radius:8px;margin-top:8px;padding:10px;}.qa-readonly-question{font-weight:700;}.qa-readonly-answer{margin-top:6px;color:#475569;}.qa-readonly-answer>span{font-weight:700;color:#1e293b;}.qa-readonly-tags span{display:inline-block;background:#eef2ff;border-radius:999px;color:#4338ca;font-size:11px;margin:6px 4px 0 0;padding:2px 7px;}.markdown-body{color:#475569;font-size:13px;line-height:1.7;}.markdown-body h1,.markdown-body h2,.markdown-body h3{color:#0f172a;margin:10px 0 6px;}.markdown-body h1{font-size:20px;}.markdown-body h2{font-size:17px;}.markdown-body h3{font-size:15px;}.markdown-body p{margin:8px 0;}.markdown-body ul,.markdown-body ol{margin:8px 0;padding-left:22px;}.markdown-body blockquote{background:#f8fafc;border-left:3px solid #93c5fd;border-radius:6px;margin:10px 0;padding:8px 12px;color:#475569;}@media print{.print-btn,.prep-note-status{display:none;}.prep-note-area{border:0;resize:none;min-height:120px;overflow:visible;}}</style></head><body><button class="print-btn" onclick="window.print()">🖨️ 打印 / 存PDF</button><h1>${safeTitle}</h1><p style="color:#64748b;">生成于 ${this.escapeHTML(new Date().toLocaleDateString())}</p><div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;"><div class="box"><strong>公司信息</strong><br>行业：${this.escapeHTML(c?.industry||'-')}<br>规模：${this.escapeHTML(c?.scale||'-')}<br>地点：${this.escapeHTML(p.location||'-')}<br>薪资：${this.escapeHTML(p.salary||'-')}<br>${companyWebsite !== '#'?`官网：<a href="${this.escapeHTML(companyWebsite)}" rel="noopener noreferrer">${this.escapeHTML(companyWebsite)}</a><br>`:''}${c?.notes?`<div style="margin-top:8px;font-size:13px;">${this.escapeHTML(c.notes)}</div>`:''}</div><div class="box"><strong>岗位JD</strong>${this.renderMarkdown(p.jd||'暂无')}</div></div>${r?`<h2>📄 关联资料：${this.escapeHTML(r.name)}</h2><div class="box" style="background:#ecfdf5;border-color:#a7f3d0;"><div style="white-space:pre-wrap;font-size:13px;">${this.escapeHTML(r.content||'')}</div></div>`:''}${questions.length?`<h2>📝 历史高频问题</h2><div class="box"><ul>${questions.map(q=>`<li>${this.escapeHTML(q)}</li>`).join('')}</ul></div>`:''}${reviewHtml}<h2>✏️ 临时笔记区</h2><div class="box prep-note-box"><textarea id="prep-note-area" class="prep-note-area" placeholder="此处可补充临时知识点、追问清单或面试前提醒...">${safePrepNote}</textarea><div id="prep-note-status" class="prep-note-status">笔记会自动保存到本机</div></div><script>(function(){var key='${safePrepNoteKey}';var area=document.getElementById('prep-note-area');var status=document.getElementById('prep-note-status');var timer;function save(){localStorage.setItem(key,area.value);if(status)status.textContent='已自动保存 '+new Date().toLocaleTimeString();}area.addEventListener('input',function(){clearTimeout(timer);timer=setTimeout(save,250);});area.addEventListener('change',save);})();</script></body></html>`);
+        win.document.write(`<html><head><title>面试准备包 - ${safeTitle}</title><style>body{font-family:-apple-system,sans-serif;max-width:800px;margin:40px auto;padding:0 20px;color:#1e293b;line-height:1.6;}h1{font-size:24px;border-bottom:2px solid #e2e8f0;padding-bottom:12px;}h2{font-size:16px;color:#3b82f6;margin-top:24px;}.box{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px;margin:12px 0;font-size:14px;}.box strong{color:#0f172a;}ul{margin:8px 0;padding-left:20px;}li{margin:4px 0;}.print-btn{position:fixed;top:20px;right:20px;padding:8px 16px;background:#3b82f6;color:white;border:none;border-radius:6px;cursor:pointer;}.prep-note-box{border-style:dashed;background:#fffdf7;}.prep-note-area{width:100%;min-height:140px;border:0;background:transparent;resize:vertical;font:inherit;color:#1e293b;line-height:1.6;outline:none;}.prep-note-status{font-size:12px;color:#64748b;margin-top:8px;}.qa-thread-list{display:flex;flex-direction:column;gap:10px;margin-top:10px;}.qa-pair{display:flex;flex-direction:column;gap:8px;}.qa-bubble{display:flex;gap:10px;border-radius:14px;padding:12px;}.qa-bubble-question{background:#eff6ff;border:1px solid #bfdbfe;}.qa-bubble-answer{background:#ecfdf5;border:1px solid #bbf7d0;}.qa-label{align-items:center;border-radius:999px;color:#fff;display:inline-flex;flex-shrink:0;font-size:11px;font-weight:900;height:24px;justify-content:center;width:24px;}.qa-label-q{background:#2563eb;}.qa-label-a{background:#10b981;}.qa-content{color:#1e293b;flex:1;font-size:13px;line-height:1.7;overflow-wrap:anywhere;white-space:pre-wrap;}.qa-content .markdown-body{white-space:normal;}.qa-empty-answer{color:#64748b;}.qa-readonly-tags span{display:inline-block;background:#eef2ff;border-radius:999px;color:#4338ca;font-size:11px;margin:6px 4px 0 0;padding:2px 7px;}.markdown-body{color:#475569;font-size:13px;line-height:1.7;}.markdown-body h1,.markdown-body h2,.markdown-body h3{color:#0f172a;margin:10px 0 6px;}.markdown-body h1{font-size:20px;}.markdown-body h2{font-size:17px;}.markdown-body h3{font-size:15px;}.markdown-body p{margin:8px 0;}.markdown-body ul,.markdown-body ol{margin:8px 0;padding-left:22px;}.markdown-body blockquote{background:#f8fafc;border-left:3px solid #93c5fd;border-radius:6px;margin:10px 0;padding:8px 12px;color:#475569;}@media print{.print-btn,.prep-note-status{display:none;}.prep-note-area{border:0;resize:none;min-height:120px;overflow:visible;}}</style></head><body><button class="print-btn" onclick="window.print()">🖨️ 打印 / 存PDF</button><h1>${safeTitle}</h1><p style="color:#64748b;">生成于 ${this.escapeHTML(new Date().toLocaleDateString())}</p><div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;"><div class="box"><strong>公司信息</strong><br>行业：${this.escapeHTML(c?.industry||'-')}<br>规模：${this.escapeHTML(c?.scale||'-')}<br>地点：${this.escapeHTML(p.location||'-')}<br>薪资：${this.escapeHTML(p.salary||'-')}<br>${companyWebsite !== '#'?`官网：<a href="${this.escapeHTML(companyWebsite)}" rel="noopener noreferrer">${this.escapeHTML(companyWebsite)}</a><br>`:''}${c?.notes?`<div style="margin-top:8px;font-size:13px;">${this.escapeHTML(c.notes)}</div>`:''}</div><div class="box"><strong>岗位JD</strong>${this.renderMarkdown(p.jd||'暂无')}</div></div>${r?`<h2>📄 关联资料：${this.escapeHTML(r.name)}</h2><div class="box" style="background:#ecfdf5;border-color:#a7f3d0;"><div style="white-space:pre-wrap;font-size:13px;">${this.escapeHTML(r.content||'')}</div></div>`:''}${questions.length?`<h2>📝 历史高频问题</h2><div class="box"><ul>${questions.map(q=>`<li>${this.escapeHTML(q)}</li>`).join('')}</ul></div>`:''}${reviewHtml}<h2>✏️ 临时笔记区</h2><div class="box prep-note-box"><textarea id="prep-note-area" class="prep-note-area" placeholder="此处可补充临时知识点、追问清单或面试前提醒...">${safePrepNote}</textarea><div id="prep-note-status" class="prep-note-status">笔记会自动保存到本机</div></div><script>(function(){var key='${safePrepNoteKey}';var area=document.getElementById('prep-note-area');var status=document.getElementById('prep-note-status');var timer;function save(){localStorage.setItem(key,area.value);if(status)status.textContent='已自动保存 '+new Date().toLocaleTimeString();}area.addEventListener('input',function(){clearTimeout(timer);timer=setTimeout(save,250);});area.addEventListener('change',save);})();</script></body></html>`);
         win.document.close();
     },
 

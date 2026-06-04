@@ -675,23 +675,130 @@ body {
 .timeline-date { font-size: 11px; color: var(--text-secondary); margin-left: 8px; }
 .timeline-note { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
 
-.interview-card {
-    background: var(--bg);
-    border-radius: 8px;
-    padding: 12px;
+.interview-record-card {
+    background: #ffffff;
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    box-shadow: var(--shadow);
     cursor: pointer;
-    transition: all 0.2s;
-    margin-bottom: 8px;
+    margin-bottom: 12px;
+    min-width: 0;
+    overflow: hidden;
+    padding: 16px;
+    transition: all 0.2s ease;
 }
-.interview-card:hover { background: #f1f5f9; }
-.interview-header { display: flex; justify-content: space-between; margin-bottom: 4px; }
-.interview-round { font-size: 13px; font-weight: 600; }
-.interview-result { font-size: 11px; font-weight: 600; }
-.interview-result.pass { color: var(--green); }
-.interview-result.fail { color: var(--red); }
-.interview-result.pending { color: var(--amber); }
-.interview-meta { font-size: 11px; color: var(--text-secondary); }
-.interview-tags { display: flex; gap: 6px; margin-top: 6px; }
+
+.interview-record-card:hover {
+    border-color: #bfdbfe;
+    box-shadow: 0 12px 28px rgba(37, 99, 235, 0.10);
+}
+
+.interview-record-header {
+    align-items: flex-start;
+    display: flex;
+    gap: 12px;
+    justify-content: space-between;
+    margin-bottom: 14px;
+    min-width: 0;
+}
+
+.interview-round-title {
+    color: var(--text);
+    font-size: 15px;
+    font-weight: 800;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+}
+
+.interview-date-text {
+    color: var(--text-secondary);
+    font-size: 12px;
+    margin-top: 2px;
+}
+
+.interview-result-badge {
+    border-radius: 999px;
+    flex-shrink: 0;
+    font-size: 11px;
+    font-weight: 800;
+    padding: 4px 9px;
+}
+
+.interview-result-badge.pass {
+    background: var(--green-light);
+    color: var(--green);
+}
+
+.interview-result-badge.fail {
+    background: var(--red-light);
+    color: var(--red);
+}
+
+.interview-result-badge.pending {
+    background: var(--amber-light);
+    color: var(--amber);
+}
+
+.interview-record-footer {
+    border-top: 1px solid var(--border);
+    color: var(--text-secondary);
+    display: flex;
+    flex-wrap: wrap;
+    font-size: 12px;
+    gap: 8px;
+    line-height: 1.45;
+    margin-top: 14px;
+    min-width: 0;
+    padding-top: 12px;
+}
+
+.interview-record-footer span {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 999px;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    padding: 3px 8px;
+}
+
+.interview-notes-preview {
+    background: #fffdf7;
+    border: 1px solid #fde68a;
+    border-radius: 14px;
+    margin-top: 12px;
+    min-width: 0;
+    padding: 12px;
+}
+
+.interview-notes-preview .markdown-body {
+    color: #475569;
+    font-size: 12px;
+    line-height: 1.65;
+}
+
+.interview-empty-state {
+    align-items: center;
+    background: #f8fbff;
+    border: 1px dashed #bfdbfe;
+    border-radius: 14px;
+    color: var(--text-secondary);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 22px 14px;
+    text-align: center;
+}
+
+.interview-empty-state strong {
+    color: var(--text);
+    font-size: 14px;
+}
+
+.interview-empty-state span {
+    font-size: 12px;
+    line-height: 1.5;
+}
+
 .tag {
     padding: 2px 8px;
     border-radius: 4px;
@@ -757,88 +864,198 @@ body {
 
 .qa-editor-list {
     display: grid;
-    gap: 10px;
+    gap: 12px;
 }
 
 .qa-editor-card {
-    background: #f8fafc;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 10px 12px;
+    background: #f8fbff;
+    border: 1px solid #dbeafe;
+    border-radius: 16px;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+    display: grid;
+    gap: 10px;
+    min-width: 0;
+    padding: 14px;
+    padding-top: 38px;
     position: relative;
 }
 
-.qa-editor-card .form-group {
-    margin-bottom: 7px;
+.qa-editor-block {
+    border-radius: 14px;
+    min-width: 0;
+    padding: 10px;
 }
 
-.qa-editor-card label {
+.qa-editor-question {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+}
+
+.qa-editor-answer {
+    background: #ecfdf5;
+    border: 1px solid #bbf7d0;
+}
+
+.qa-editor-tags {
+    background: rgba(255, 255, 255, 0.72);
+    border: 1px solid #e2e8f0;
+}
+
+.qa-editor-label {
+    align-items: center;
     color: var(--text-secondary);
+    display: flex;
     font-size: 11px;
-    font-weight: 600;
+    font-weight: 800;
+    gap: 7px;
     letter-spacing: 0;
-    margin-bottom: 4px;
+    margin-bottom: 8px;
 }
 
-.qa-editor-card .form-group:last-child {
-    margin-bottom: 0;
+.qa-editor-label .qa-label {
+    height: 20px;
+    width: 20px;
 }
 
 .qa-editor-card textarea,
 .qa-editor-card input {
+    background: #ffffff;
+    border: 1px solid #dbe4f0;
+    border-radius: 12px;
+    color: var(--text);
     font-size: 12px;
+    min-width: 0;
+    outline: none;
+    padding: 9px 10px;
+    transition: all 0.2s;
+    width: 100%;
 }
 
 .qa-editor-card .qa-question {
     min-height: 42px;
 }
 
+.qa-editor-card .qa-question:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
 .qa-editor-card .qa-answer {
     min-height: 74px;
 }
 
+.qa-editor-card .qa-answer:focus {
+    border-color: #10b981;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.12);
+}
+
+.qa-editor-card .qa-tags:focus {
+    border-color: #94a3b8;
+    box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.12);
+}
+
 .qa-delete-btn {
-    background: transparent;
-    border: none;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 999px;
     color: var(--text-secondary);
     cursor: pointer;
     font-size: 11px;
-    padding: 2px 0;
+    font-weight: 700;
+    padding: 4px 9px;
     position: absolute;
     right: 12px;
-    top: 8px;
+    top: 10px;
+    transition: all 0.2s;
 }
 
 .qa-delete-btn:hover {
+    background: #fef2f2;
+    border-color: #fecaca;
     color: var(--red);
 }
 
+.qa-thread-list,
 .qa-readonly-list {
-    display: grid;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 0;
+}
+
+.qa-pair {
+    display: flex;
+    flex-direction: column;
     gap: 8px;
-    margin-top: 10px;
+    min-width: 0;
 }
 
-.qa-readonly-card {
-    background: #f8fafc;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 10px;
+.qa-bubble {
+    border-radius: 14px;
+    display: flex;
+    gap: 10px;
+    min-width: 0;
+    padding: 12px;
 }
 
-.qa-readonly-question {
+.qa-bubble-question {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+}
+
+.qa-bubble-answer {
+    background: #ecfdf5;
+    border: 1px solid #bbf7d0;
+}
+
+.qa-label {
+    align-items: center;
+    border-radius: 999px;
+    color: #ffffff;
+    display: inline-flex;
+    flex-shrink: 0;
+    font-size: 11px;
+    font-weight: 900;
+    height: 24px;
+    justify-content: center;
+    width: 24px;
+}
+
+.qa-label-q {
+    background: #2563eb;
+}
+
+.qa-label-a {
+    background: #10b981;
+}
+
+.qa-content {
+    color: var(--text);
+    flex: 1;
+    font-size: 13px;
+    line-height: 1.7;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+}
+
+.qa-content .markdown-body {
     color: var(--text);
     font-size: 13px;
-    font-weight: 700;
-    line-height: 1.5;
+    line-height: 1.7;
+    white-space: normal;
 }
 
-.qa-readonly-answer {
+.qa-content .markdown-body p:first-child {
+    margin-top: 0;
+}
+
+.qa-content .markdown-body p:last-child {
+    margin-bottom: 0;
+}
+
+.qa-empty-answer {
     color: var(--text-secondary);
-    font-size: 12px;
-    line-height: 1.6;
-    margin-top: 6px;
-    white-space: pre-wrap;
 }
 
 .qa-readonly-tags {
@@ -1126,6 +1343,45 @@ body {
     .layout-sidebar { grid-template-columns: 1fr; }
     .sidebar { flex-direction: row; overflow-x: auto; padding-bottom: 4px; }
     .detail-body { grid-template-columns: 1fr; }
+
+    .interview-record-card {
+        border-radius: 14px;
+        padding: 14px;
+        width: 100%;
+    }
+
+    .interview-record-header {
+        gap: 8px;
+    }
+
+    .interview-round-title {
+        font-size: 14px;
+    }
+
+    .qa-bubble {
+        gap: 8px;
+        padding: 10px;
+    }
+
+    .qa-content,
+    .qa-content .markdown-body {
+        font-size: 12px;
+    }
+
+    .qa-editor-card {
+        border-radius: 14px;
+        padding: 12px;
+        padding-top: 38px;
+    }
+
+    .qa-editor-block {
+        padding: 9px;
+    }
+
+    .qa-delete-btn {
+        right: 10px;
+        top: 9px;
+    }
 
     /* 移动端保留顶部导航栏：原代码在手机宽度下隐藏了 .nav-tabs */
     .navbar {
