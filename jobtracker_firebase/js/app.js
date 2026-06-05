@@ -788,28 +788,47 @@ const app = {
 
     renderQAPairEditor(pairs = []) {
         if (!pairs.length) return this.renderQAEmptyState();
-        return pairs.map(pair => this.renderQAPairEditorItem(pair)).join('');
+        return pairs.map((pair, index) => this.renderQAPairEditorItem(pair, index)).join('');
     },
 
     renderQAEmptyState() {
         return '<div class="qa-editor-empty">暂无追问记录，请点击右上角新增问答</div>';
     },
 
-    renderQAPairEditorItem(pair = {}) {
+    renderQAPairEditorItem(pair = {}, index = 0) {
         const tagsText = Array.isArray(pair.tags) ? pair.tags.join(', ') : (pair.tags || '');
         return `<div class="qa-editor-card" data-qa-id="${this.escapeHTML(pair.id || this.createQAPairId())}" data-created-at="${this.escapeHTML(pair.createdAt || '')}">
-            <button type="button" class="qa-delete-btn" onclick="app.removeQAPair(this)" title="删除此问答" aria-label="删除此问答">×</button>
-            <div class="qa-editor-block qa-editor-question">
-                <div class="qa-editor-label"><span class="qa-label qa-label-q">Q</span><span>问题 / 追问</span></div>
-                <textarea class="qa-question" rows="2" placeholder="例如：请介绍一个你做过的复杂项目">${this.escapeHTML(pair.question || '')}</textarea>
+            <div class="qa-editor-card-header">
+                <div class="qa-editor-label qa-editor-question-title"><span class="qa-label qa-label-q">Q</span><span>问题 / 追问</span></div>
+                <div class="qa-card-actions">
+                    <button type="button" class="qa-preview-toggle-btn" onclick="app.toggleQAPairPreview(this)" title="预览 Markdown">预览</button>
+                    <button type="button" class="qa-add-after-btn" onclick="app.addQAPairAfter(this)" title="在下方新增问答" aria-label="在下方新增问答">＋</button>
+                    <button type="button" class="qa-delete-btn" onclick="app.removeQAPair(this)" title="删除此问答" aria-label="删除此问答">×</button>
+                </div>
             </div>
-            <div class="qa-editor-block qa-editor-answer">
-                <div class="qa-editor-label"><span class="qa-label qa-label-a">A</span><span>现场回答 / 优化答案</span></div>
-                <textarea class="qa-answer" rows="3" placeholder="记录你的回答、追问或复盘要点">${this.escapeHTML(pair.answer || '')}</textarea>
+            <div class="qa-editor-fields">
+                <div class="qa-editor-block qa-editor-question">
+                    <textarea class="qa-question" data-field="question" rows="2" placeholder="支持 Markdown：标题、列表、加粗、引用">${this.escapeHTML(pair.question || '')}</textarea>
+                </div>
+                <div class="qa-editor-block qa-editor-answer">
+                    <div class="qa-editor-label"><span class="qa-label qa-label-a">A</span><span>现场回答 / 优化答案</span></div>
+                    <textarea class="qa-answer" data-field="answer" rows="3" placeholder="记录你的回答、追问或复盘要点，支持 Markdown">${this.escapeHTML(pair.answer || '')}</textarea>
+                </div>
+                <div class="qa-editor-block qa-editor-tags">
+                    <div class="qa-editor-label"><span>标签</span></div>
+                    <input class="qa-tags" data-field="tags" placeholder="算法, 项目, 职业规划" value="${this.escapeHTML(tagsText)}">
+                </div>
             </div>
-            <div class="qa-editor-block qa-editor-tags">
-                <div class="qa-editor-label"><span>标签</span></div>
-                <input class="qa-tags" placeholder="算法, 项目, 职业规划" value="${this.escapeHTML(tagsText)}">
+            <div class="qa-preview-panel hidden">
+                <div class="qa-bubble qa-bubble-question">
+                    <div class="qa-label qa-label-q">Q</div>
+                    <div class="qa-content qa-markdown-content qa-preview-question"></div>
+                </div>
+                <div class="qa-bubble qa-bubble-answer">
+                    <div class="qa-label qa-label-a">A</div>
+                    <div class="qa-content qa-markdown-content qa-preview-answer"></div>
+                </div>
+                <div class="qa-preview-hint">预览不会保存 HTML，保存时仍会写入 Markdown 原文。</div>
             </div>
         </div>`;
     },
@@ -821,9 +840,32 @@ const app = {
     addQAPair() {
         const list = document.getElementById('qa-pair-list');
         if (!list) return;
-        const empty = list.querySelector('.qa-editor-empty');
-        if (empty) empty.remove();
-        list.insertAdjacentHTML('beforeend', this.renderQAPairEditorItem({ id: this.createQAPairId(), question: '', answer: '', tags: [] }));
+        const pairs = this.collectQAPairsFromEditor();
+        pairs.push({ id: this.createQAPairId(), question: '', answer: '', tags: [] });
+        list.innerHTML = this.renderQAPairEditor(pairs);
+        requestAnimationFrame(() => {
+            const cards = list.querySelectorAll('.qa-editor-card');
+            const newCard = cards[cards.length - 1];
+            newCard?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            newCard?.querySelector('[data-field="question"]')?.focus();
+        });
+    },
+
+    addQAPairAfter(target) {
+        const list = document.getElementById('qa-pair-list');
+        if (!list) return;
+        const pairs = this.collectQAPairsFromEditor();
+        const cards = [...list.querySelectorAll('.qa-editor-card')];
+        const clickedCard = target?.closest ? target.closest('.qa-editor-card') : null;
+        const index = clickedCard ? cards.indexOf(clickedCard) : Number(target);
+        const insertAt = Number.isFinite(index) && index >= 0 ? index + 1 : pairs.length;
+        pairs.splice(insertAt, 0, { id: this.createQAPairId(), question: '', answer: '', tags: [] });
+        list.innerHTML = this.renderQAPairEditor(pairs);
+        requestAnimationFrame(() => {
+            const newCard = list.querySelectorAll('.qa-editor-card')[insertAt];
+            newCard?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            newCard?.querySelector('[data-field="question"]')?.focus();
+        });
     },
 
     removeQAPair(btn) {
@@ -838,22 +880,51 @@ const app = {
         card.remove();
     },
 
-    collectQAPairs() {
+    collectQAPairsFromEditor() {
         return [...document.querySelectorAll('#qa-pair-list .qa-editor-card')].map(card => {
             const now = new Date().toISOString();
-            const tags = card.querySelector('.qa-tags').value
+            const tags = (card.querySelector('[data-field="tags"]')?.value || card.querySelector('.qa-tags')?.value || '')
                 .split(/,|，/)
                 .map(tag => tag.trim())
                 .filter(Boolean);
             return {
                 id: card.dataset.qaId || this.createQAPairId(),
-                question: card.querySelector('.qa-question').value.trim(),
-                answer: card.querySelector('.qa-answer').value.trim(),
+                question: (card.querySelector('[data-field="question"]')?.value || card.querySelector('.qa-question')?.value || '').trim(),
+                answer: (card.querySelector('[data-field="answer"]')?.value || card.querySelector('.qa-answer')?.value || '').trim(),
                 tags,
                 createdAt: card.dataset.createdAt || now,
                 updatedAt: now
             };
-        }).filter(pair => pair.question || pair.answer || pair.tags.length);
+        });
+    },
+
+    collectQAPairs() {
+        return this.collectQAPairsFromEditor()
+            .filter(pair => pair.question || pair.answer || pair.tags.length);
+    },
+
+    toggleQAPairPreview(btn) {
+        const card = btn.closest('.qa-editor-card');
+        if (!card) return;
+        const fields = card.querySelector('.qa-editor-fields');
+        const preview = card.querySelector('.qa-preview-panel');
+        if (!fields || !preview) return;
+        const showingPreview = !preview.classList.contains('hidden');
+        if (showingPreview) {
+            preview.classList.add('hidden');
+            fields.classList.remove('hidden');
+            btn.textContent = '预览';
+            btn.title = '预览 Markdown';
+            return;
+        }
+        const question = card.querySelector('[data-field="question"]')?.value || '';
+        const answer = card.querySelector('[data-field="answer"]')?.value || '';
+        card.querySelector('.qa-preview-question').innerHTML = this.renderMarkdown(question || '暂无问题');
+        card.querySelector('.qa-preview-answer').innerHTML = this.renderMarkdown(answer || '暂无回答');
+        fields.classList.add('hidden');
+        preview.classList.remove('hidden');
+        btn.textContent = '编辑';
+        btn.title = '返回编辑';
     },
 
     renderQAPairsReadOnly(interview, options = {}) {
@@ -862,8 +933,8 @@ const app = {
         const limit = options.limit || pairs.length;
         return `<div class="qa-thread-list">${pairs.slice(0, limit).map(pair => `
             <div class="qa-pair">
-                ${pair.question ? `<div class="qa-bubble qa-bubble-question"><div class="qa-label qa-label-q">Q</div><div class="qa-content">${this.escapeHTML(pair.question)}</div></div>` : ''}
-                <div class="qa-bubble qa-bubble-answer"><div class="qa-label qa-label-a">A</div><div class="qa-content">${pair.answer ? this.renderMarkdown(pair.answer) : '<span class="qa-empty-answer">暂无回答</span>'}</div></div>
+                <div class="qa-bubble qa-bubble-question"><div class="qa-label qa-label-q">Q</div><div class="qa-content qa-markdown-content">${this.renderMarkdown(pair.question || '暂无问题')}</div></div>
+                <div class="qa-bubble qa-bubble-answer"><div class="qa-label qa-label-a">A</div><div class="qa-content qa-markdown-content">${this.renderMarkdown(pair.answer || '暂无回答')}</div></div>
                 ${pair.tags?.length ? `<div class="qa-readonly-tags">${pair.tags.map(tag => `<span>${this.escapeHTML(tag)}</span>`).join('')}</div>` : ''}
             </div>`).join('')}</div>`;
     },

@@ -1602,6 +1602,30 @@ body {
     position: relative;
 }
 
+.qa-editor-card-header {
+    align-items: center;
+    display: flex;
+    gap: 10px;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+.qa-editor-card-title {
+    align-items: center;
+    color: var(--text-secondary);
+    display: flex;
+    font-size: 13px;
+    font-weight: 800;
+    gap: 8px;
+    min-width: 0;
+}
+
+.qa-editor-fields {
+    display: grid;
+    gap: 12px;
+    min-width: 0;
+}
+
 .qa-editor-block {
     min-width: 0;
     padding: 0;
@@ -1631,6 +1655,12 @@ body {
     gap: 7px;
     letter-spacing: 0;
     margin-bottom: 8px;
+}
+
+.qa-editor-question-title {
+    flex: 1 1 auto;
+    margin-bottom: 0;
+    min-width: 0;
 }
 
 .qa-editor-label .qa-label {
@@ -1675,30 +1705,72 @@ body {
     box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.12);
 }
 
+.qa-card-actions {
+    align-items: center;
+    display: flex;
+    flex-shrink: 0;
+    gap: 6px;
+}
+
+.qa-add-after-btn,
 .qa-delete-btn {
     align-items: center;
-    background: transparent;
-    border: 0;
-    border-radius: 8px;
+    background: #ffffff;
+    border: 1px solid var(--border);
+    border-radius: 999px;
     color: var(--text-secondary);
     cursor: pointer;
     display: inline-flex;
-    font-size: 21px;
-    font-weight: 300;
+    font-size: 15px;
+    font-weight: 800;
     height: 28px;
     justify-content: center;
     line-height: 1;
     padding: 0;
-    position: absolute;
-    right: 12px;
-    top: 12px;
-    transition: all 0.2s;
+    transition: all 0.2s ease;
     width: 28px;
 }
 
+.qa-preview-toggle-btn {
+    align-items: center;
+    background: #ffffff;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: inline-flex;
+    font-size: 11px;
+    font-weight: 800;
+    height: 28px;
+    justify-content: center;
+    padding: 0 9px;
+    transition: all 0.2s ease;
+}
+
+.qa-preview-toggle-btn:hover,
+.qa-add-after-btn:hover {
+    background: var(--brand-50);
+    border-color: var(--brand-200);
+    color: var(--brand-600);
+}
+
 .qa-delete-btn:hover {
-    background: #fef2f2;
-    color: var(--red);
+    background: var(--danger-light);
+    border-color: #fecaca;
+    color: var(--danger);
+}
+
+.qa-preview-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+}
+
+.qa-preview-hint {
+    color: var(--text-muted);
+    font-size: 11px;
+    padding-left: 2px;
 }
 
 .qa-thread-list,
@@ -1763,6 +1835,21 @@ body {
     min-width: 0;
     overflow-wrap: anywhere;
     white-space: pre-wrap;
+}
+
+.qa-markdown-content {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.qa-markdown-content .markdown-body {
+    margin: 0;
+}
+
+.qa-markdown-content .markdown-body h1,
+.qa-markdown-content .markdown-body h2,
+.qa-markdown-content .markdown-body h3 {
+    margin-top: 0;
 }
 
 .qa-content .markdown-body {
@@ -2099,13 +2186,33 @@ body {
         padding: 12px;
     }
 
+    .qa-editor-card-header {
+        align-items: center;
+    }
+
+    .qa-card-actions {
+        align-self: flex-start;
+        gap: 7px;
+    }
+
+    .qa-add-after-btn,
+    .qa-delete-btn {
+        height: 32px;
+        width: 32px;
+    }
+
+    .qa-preview-toggle-btn {
+        height: 32px;
+        padding: 0 10px;
+    }
+
     .qa-editor-block {
         padding: 0;
     }
 
     .qa-delete-btn {
-        right: 10px;
-        top: 9px;
+        right: auto;
+        top: auto;
     }
 
     /* 移动端保留顶部导航栏：原代码在手机宽度下隐藏了 .nav-tabs */
