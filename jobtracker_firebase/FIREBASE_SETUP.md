@@ -105,8 +105,9 @@ cd ~
 rm -rf ~/jobtracker_firebase
 ls
 ```
+
 点击上传文件夹
-![1780411423517](image/FIREBASE_SETUP/1780411423517.png)
+![1780643926614](image/FIREBASE_SETUP/1780643926614.png)
 
 ```text
 cd jobtracker_firebase

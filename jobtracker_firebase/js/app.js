@@ -677,6 +677,15 @@ const app = {
         this.openResumePreview(resumeId);
     },
 
+    syncModalOpenState() {
+        const hasOpenModal = ['modal-backdrop', 'detail-backdrop', 'resume-preview-backdrop']
+            .some(id => {
+                const el = document.getElementById(id);
+                return el && !el.classList.contains('hidden');
+            });
+        document.body.classList.toggle('modal-open', hasOpenModal);
+    },
+
     openResumePreview(resumeId) {
         const resume = this.data.resumes.find(r => r.id === resumeId);
         if (!resume) {
@@ -722,11 +731,13 @@ const app = {
         const downloadBtn = resume.fileData ? `<button class="btn-secondary" onclick="app.downloadFile('${resumeArg}', '${this.escapeJSString(fileName || '文件')}')">下载文件</button>` : '';
         footer.innerHTML = `${downloadBtn}<button class="btn-secondary" onclick="app.closeResumePreview();app.editResume('${resumeArg}')">编辑资料</button><button class="btn-primary" onclick="app.closeResumePreview()">关闭</button>`;
         backdrop.classList.remove('hidden');
+        this.syncModalOpenState();
     },
 
     closeResumePreview() {
         const backdrop = document.getElementById('resume-preview-backdrop');
         if (backdrop) backdrop.classList.add('hidden');
+        this.syncModalOpenState();
     },
 
     downloadFile(resumeId, fileName) {
@@ -1310,6 +1321,7 @@ const app = {
         const body = document.getElementById('modal-body');
         const footer = document.getElementById('modal-footer');
         backdrop.classList.remove('hidden');
+        this.syncModalOpenState();
 
         if (type === 'activity') {
             title.textContent = '补全日志';
@@ -1452,6 +1464,7 @@ const app = {
 
     closeModal() {
         document.getElementById('modal-backdrop').classList.add('hidden');
+        this.syncModalOpenState();
     },
 
     saveCompany() {
@@ -1833,11 +1846,13 @@ const app = {
             </section>
         `;
         document.getElementById('detail-backdrop').classList.remove('hidden');
+        this.syncModalOpenState();
     },
 
     closeDetail() {
         document.getElementById('detail-backdrop').classList.add('hidden');
         this.currentDetail = null;
+        this.syncModalOpenState();
     },
 
     toggleCompanyBackground(btn) {
