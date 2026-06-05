@@ -12,56 +12,58 @@
         <span id="global-toast-message">操作成功</span>
     </div>
 
-    <!-- 顶部导航 -->
-    <nav class="navbar">
-        <div class="nav-brand">
-            <div class="logo">J</div>
-            <h1>JobTracker <span>应届生求职作战指挥部</span></h1>
-        </div>
-        <div class="nav-tabs">
-            <button class="tab-btn active" data-view="dashboard">仪表盘</button>
-            <button class="tab-btn" data-view="positions">求职进度</button>
-            <button class="tab-btn" data-view="resumes">资料库</button>
-            <button class="tab-btn" data-view="analytics">洞察</button>
-            <button class="tab-btn" data-view="settings">设置</button>
-        </div>
-        <div class="nav-actions">
-            <button id="sync-btn" class="btn-icon" title="上传到 Firebase 云端">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                    <polyline points="17 8 12 3 7 8"></polyline>
-                    <line x1="12" y1="3" x2="12" y2="15"></line>
-                </svg>
-            </button>
-            <span id="sync-status" class="sync-badge">本地</span>
-        </div>
-    </nav>
+    <div class="app-shell">
+        <!-- 移动端顶部品牌栏 -->
+        <nav class="navbar">
+            <div class="nav-brand">
+                <div class="logo">J</div>
+                <h1>JobTracker <span>应届生求职作战指挥部</span></h1>
+            </div>
+        </nav>
 
-    <nav class="mobile-tabbar" aria-label="移动端主导航">
-        <button class="mobile-tab-btn active" data-view="dashboard">
-            <span class="mobile-tab-icon">⌂</span>
-            <span>仪表盘</span>
-        </button>
-        <button class="mobile-tab-btn" data-view="positions">
-            <span class="mobile-tab-icon">▦</span>
-            <span>进度</span>
-        </button>
-        <button class="mobile-tab-btn" data-view="resumes">
-            <span class="mobile-tab-icon">▤</span>
-            <span>资料</span>
-        </button>
-        <button class="mobile-tab-btn" data-view="analytics">
-            <span class="mobile-tab-icon">◫</span>
-            <span>洞察</span>
-        </button>
-        <button class="mobile-tab-btn" data-view="settings">
-            <span class="mobile-tab-icon">⚙</span>
-            <span>设置</span>
-        </button>
-    </nav>
+        <!-- 桌面端侧边导航 -->
+        <aside class="desktop-sidebar" aria-label="桌面端主导航">
+            <div class="sidebar-top">
+                <div class="sidebar-brand">
+                    <div class="logo">J</div>
+                    <div>
+                        <h1>JobTracker</h1>
+                        <span>求职作战指挥部</span>
+                    </div>
+                </div>
 
-    <!-- 主内容区 -->
-    <main class="container">
+                <nav class="sidebar-nav">
+                    <button class="tab-btn active" data-view="dashboard">
+                        <span class="nav-icon">⌂</span>
+                        <span>仪表盘</span>
+                    </button>
+                    <button class="tab-btn" data-view="positions">
+                        <span class="nav-icon">▦</span>
+                        <span>求职进度</span>
+                    </button>
+                    <button class="tab-btn" data-view="resumes">
+                        <span class="nav-icon">▤</span>
+                        <span>资料库</span>
+                    </button>
+                    <button class="tab-btn" data-view="analytics">
+                        <span class="nav-icon">◫</span>
+                        <span>数据洞察</span>
+                    </button>
+                    <button class="tab-btn" data-view="settings">
+                        <span class="nav-icon">⚙</span>
+                        <span>设置系统</span>
+                    </button>
+                </nav>
+            </div>
+
+            <div class="sidebar-bottom">
+                <button id="sync-btn" class="sidebar-sync-btn" title="上传到 Firebase 云端">云同步</button>
+                <span id="sync-status" class="sync-badge">本地</span>
+            </div>
+        </aside>
+
+        <!-- 主内容区 -->
+        <main class="container">
         <!-- 仪表盘 -->
         <section id="view-dashboard" class="view active">
             <div class="section-header">
@@ -244,7 +246,31 @@
                 </div>
             </div>
         </section>
-    </main>
+        </main>
+    </div>
+
+    <nav class="mobile-tabbar" aria-label="移动端主导航">
+        <button class="mobile-tab-btn active" data-view="dashboard">
+            <span class="mobile-tab-icon">⌂</span>
+            <span>仪表盘</span>
+        </button>
+        <button class="mobile-tab-btn" data-view="positions">
+            <span class="mobile-tab-icon">▦</span>
+            <span>进度</span>
+        </button>
+        <button class="mobile-tab-btn" data-view="resumes">
+            <span class="mobile-tab-icon">▤</span>
+            <span>资料</span>
+        </button>
+        <button class="mobile-tab-btn" data-view="analytics">
+            <span class="mobile-tab-icon">◫</span>
+            <span>洞察</span>
+        </button>
+        <button class="mobile-tab-btn" data-view="settings">
+            <span class="mobile-tab-icon">⚙</span>
+            <span>设置</span>
+        </button>
+    </nav>
 
     <!-- 通用弹窗 -->
     <div class="modal-backdrop hidden" id="modal-backdrop" onclick="app.closeModal()">
