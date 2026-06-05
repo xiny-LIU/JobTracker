@@ -1380,17 +1380,21 @@ const app = {
         this.showToast('所有数据已清空', 'warn');
     },
 
-    openModal(type, id = null, presetCompanyId = '') {
+    openModal(type, id = null, presetCompanyId = '', options = {}) {
+        const keepDetailOpen = options.keepDetailOpen === true;
         // 如果详情页打开了，先关闭它
         const detailBackdrop = document.getElementById('detail-backdrop');
-        if (detailBackdrop && !detailBackdrop.classList.contains('hidden')) {
+        if (!keepDetailOpen && detailBackdrop && !detailBackdrop.classList.contains('hidden')) {
             this.closeDetail();
         }
 
         const backdrop = document.getElementById('modal-backdrop');
+        const modal = backdrop?.querySelector('.modal');
         const title = document.getElementById('modal-title');
         const body = document.getElementById('modal-body');
         const footer = document.getElementById('modal-footer');
+        modal?.classList.remove('modal-interview', 'modal-wide');
+        if (type === 'interview') modal?.classList.add('modal-interview');
         backdrop.classList.remove('hidden');
         this.syncModalOpenState();
 
@@ -1780,13 +1784,12 @@ const app = {
         };
         if (id) DataStore.updateInterview(id, data);
         else DataStore.addInterview(data);
+        const detailPositionId = this.currentDetail?.id || '';
         this.data = DataStore.get();
         this.closeModal();
-        this.render();
+        if (detailPositionId) this.openDetail(detailPositionId);
+        else this.renderPositions();
         this.backgroundSync();
-        if (!document.getElementById('detail-backdrop').classList.contains('hidden')) {
-            this.openDetail(posId);
-        }
         this.showToast(id ? '面试记录已保存' : '面试记录已新增');
     },
 
@@ -1795,13 +1798,12 @@ const app = {
         const posId = document.getElementById('m-iv-pos').value;
         if (!id || !confirm('确定删除此面试记录？')) return;
         DataStore.deleteInterview(id);
+        const detailPositionId = this.currentDetail?.id || posId || '';
         this.data = DataStore.get();
         this.closeModal();
-        this.render();
+        if (detailPositionId && this.currentDetail) this.openDetail(detailPositionId);
+        else this.renderPositions();
         this.backgroundSync();
-        if (!document.getElementById('detail-backdrop').classList.contains('hidden')) {
-            this.openDetail(posId);
-        }
         this.showToast('面试记录已删除', 'warn');
     },
 
@@ -1814,8 +1816,13 @@ const app = {
         this.openModal('position', positionId, companyId);
     },
 
-    openInterviewModal(positionId, interviewId = null) {
-        this.openModal('interview', positionId, interviewId);
+    openInterviewModal(positionId, interviewId = null, options = {}) {
+        const detailBackdrop = document.getElementById('detail-backdrop');
+        const detailOpen = detailBackdrop && !detailBackdrop.classList.contains('hidden');
+        this.openModal('interview', positionId, interviewId, {
+            ...options,
+            keepDetailOpen: options.keepDetailOpen === true || detailOpen
+        });
     },
 
     editResume(id) {

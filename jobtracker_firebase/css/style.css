@@ -859,10 +859,6 @@ body {
     width: min(88vw, 860px);
 }
 
-#resume-preview-backdrop {
-    z-index: 1010;
-}
-
 .resume-preview-header {
     align-items: flex-start;
     flex-shrink: 0;
@@ -963,6 +959,19 @@ body {
     opacity: 0 !important;
     pointer-events: none !important;
 }
+
+#detail-backdrop {
+    z-index: 1000;
+}
+
+#modal-backdrop {
+    z-index: 1100;
+}
+
+#resume-preview-backdrop {
+    z-index: 1110;
+}
+
 .modal {
     background: white;
     border-radius: var(--radius-xl);
@@ -979,6 +988,11 @@ body {
 }
 .modal-backdrop:not(.hidden) .modal { transform: translateY(0); }
 .modal-lg { max-width: 1040px; }
+.modal-interview {
+    max-width: min(92vw, 900px);
+    width: min(92vw, 900px);
+}
+
 .modal-backdrop:not(.hidden) .modal.resume-preview-modal {
     max-width: none;
 }
@@ -3065,6 +3079,11 @@ body {
         max-height: calc(100dvh - 24px);
         max-width: calc(100vw - 24px);
         overflow: hidden;
+        width: calc(100vw - 24px);
+    }
+
+    .modal-interview {
+        max-width: calc(100vw - 24px);
         width: calc(100vw - 24px);
     }
 
