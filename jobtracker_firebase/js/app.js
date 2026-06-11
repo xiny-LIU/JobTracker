@@ -8,7 +8,7 @@ const app = {
     companySortable: null,
     lastPositionFilterKey: '',
     toastTimer: null,
-    aiEndpoint: '/api/aiChat',
+    defaultAIEndpoint: '',
     aiState: {
         selectedTask: 'prepare_package',
         selectedCompanyId: '',
@@ -1551,7 +1551,9 @@ const app = {
         this.renderAI();
 
         try {
-            const res = await fetch(this.aiEndpoint, {
+            const endpoint = this.getAIEndpoint();
+            if (!endpoint) throw new Error('请先在设置系统中填写 AI 代理地址');
+            const res = await fetch(endpoint, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ task, context, message: userPrompt })
@@ -1649,6 +1651,8 @@ const app = {
     renderSettings() {
         const status = document.getElementById('firebase-status');
         if (!status) return;
+        const aiEndpointInput = document.getElementById('ai-endpoint-input');
+        if (aiEndpointInput) aiEndpointInput.value = this.getAIEndpoint();
 
         if (!window.FirebaseStore) {
             status.textContent = 'Firebase SDK 还没有加载完成。请确认当前设备可以访问 Firebase，并优先使用本地服务器打开页面。';
@@ -1663,6 +1667,18 @@ const app = {
             status.textContent = '未登录。请先点击“Google 登录”，再进行上传或拉取。';
         }
         this.updateSyncBadge();
+    },
+
+    getAIEndpoint() {
+        return localStorage.getItem('jobtracker_ai_endpoint') || this.defaultAIEndpoint || '';
+    },
+
+    saveAIEndpoint() {
+        const input = document.getElementById('ai-endpoint-input');
+        const value = input?.value.trim() || '';
+        if (value) localStorage.setItem('jobtracker_ai_endpoint', value);
+        else localStorage.removeItem('jobtracker_ai_endpoint');
+        this.showToast(value ? 'AI 代理地址已保存' : 'AI 代理地址已清空', value ? 'success' : 'warn');
     },
 
     async firebaseLogin() {

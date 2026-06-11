@@ -245,6 +245,20 @@
                 </div>
 
                 <div class="setting-card">
+                    <h3>AI 助手代理</h3>
+                    <p class="setting-desc">填写你部署的 AI 后端代理地址，例如 Cloudflare Worker URL。DeepSeek API Key 只保存在代理服务端，不要写入前端。</p>
+                    <div class="form-group">
+                        <label>AI 代理地址</label>
+                        <input id="ai-endpoint-input" placeholder="例如：https://jobtracker-ai.your-name.workers.dev">
+                    </div>
+                    <div class="form-actions">
+                        <button class="btn-primary" onclick="app.saveAIEndpoint()">保存代理地址</button>
+                        <button class="btn-secondary" onclick="document.getElementById('ai-endpoint-input').value='';app.saveAIEndpoint()">清空</button>
+                    </div>
+                    <span class="hint">如果不配置，AI 助手页面会正常打开，但无法发起生成请求。</span>
+                </div>
+
+                <div class="setting-card">
                     <h3>本地备份与迁移</h3>
                     <p class="setting-desc">数据仍会保存在当前浏览器中。Firebase 出问题时，可以用 JSON 文件手动备份。</p>
 
