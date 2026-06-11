@@ -516,6 +516,9 @@ body {
 .badge-一面,
 .badge-二面,
 .badge-三面,
+.badge-四面,
+.badge-五面,
+.badge-六面,
 .badge-HR面 { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
 .badge-Offer { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; font-weight: 700; }
 .badge-拒绝 { background: var(--red-light); color: #b91c1c; border: 1px solid #fecaca; }
@@ -2935,6 +2938,9 @@ body {
 .badge-一面,
 .badge-二面,
 .badge-三面,
+.badge-四面,
+.badge-五面,
+.badge-六面,
 .badge-HR面,
 .badge-Offer,
 .badge-拒绝,

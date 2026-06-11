@@ -283,7 +283,7 @@ const app = {
     },
 
     getCompanyHighestStatus(company) {
-        const statusOrder = ['未投递', '投递', '笔试', '一面', '二面', '三面', 'HR面', 'Offer', '接受'];
+        const statusOrder = ['未投递', '投递', '笔试', '一面', '二面', '三面', '四面', '五面', '六面', 'Offer', '接受'];
         const jobs = this.getCompanyJobs(company.id);
         if (!jobs.length) return '未投递';
         const activeJobs = jobs.filter(p => p.status !== '拒绝');
@@ -346,8 +346,9 @@ const app = {
     },
 
     safeBadgeClass(value) {
-        const allowed = new Set(['未投递', '投递', '笔试', '一面', '二面', '三面', 'HR面', 'Offer', '拒绝', '接受']);
-        return allowed.has(value) ? value : '未投递';
+        const normalized = value === 'HR面' ? '四面' : value;
+        const allowed = new Set(['未投递', '投递', '笔试', '一面', '二面', '三面', '四面', '五面', '六面', 'Offer', '拒绝', '接受']);
+        return allowed.has(normalized) ? normalized : '未投递';
     },
 
     safeURL(value) {
@@ -366,7 +367,7 @@ const app = {
         const weekAgo = new Date(now - 7 * 86400000);
         const total = this.data.positions.length;
         const delivered = this.data.positions.filter(p => p.status !== '未投递').length;
-        const interviewing = this.data.positions.filter(p => ['一面','二面','三面','HR面'].includes(p.status)).length;
+        const interviewing = this.data.positions.filter(p => ['一面','二面','三面','四面','五面','六面'].includes(p.status === 'HR面' ? '四面' : p.status)).length;
         const offers = this.data.positions.filter(p => ['Offer','接受'].includes(p.status)).length;
         const followUp = this.data.positions.filter(p => {
             if (['Offer','接受','拒绝'].includes(p.status)) return false;
@@ -381,11 +382,14 @@ const app = {
         if (deliveredEl) deliveredEl.textContent = delivered;
 
         // 状态分布
-        const stages = ['未投递', '投递', '笔试', '一面', '二面', '三面', 'HR面', 'Offer', '拒绝', '接受'];
-        const normStatus = p => stages.includes(p.status) ? p.status : '未投递';
+        const stages = ['未投递', '投递', '笔试', '一面', '二面', '三面', '四面', '五面', '六面', 'Offer', '拒绝', '接受'];
+        const normStatus = p => {
+            const status = p.status === 'HR面' ? '四面' : p.status;
+            return stages.includes(status) ? status : '未投递';
+        };
         const counts = stages.map(s => this.data.positions.filter(p => normStatus(p) === s).length);
         const max = Math.max(...counts, 1);
-        const colors = ['#94a3b8', '#f59e0b', '#3b82f6', '#8b5cf6', '#ec4899', '#10b981', '#059669', '#0ea5e9', '#ef4444', '#0f766e'];
+        const colors = ['#94a3b8', '#f59e0b', '#3b82f6', '#8b5cf6', '#ec4899', '#10b981', '#14b8a6', '#0ea5e9', '#6366f1', '#22c55e', '#ef4444', '#0f766e'];
 
         document.getElementById('funnel-container').innerHTML = stages.map((s, i) => {
             const count = counts[i];
@@ -740,7 +744,7 @@ const app = {
 
     advance(id) {
         const p = this.data.positions.find(x => x.id === id);
-        const flow = ['未投递', '投递', '笔试', '一面', '二面', '三面', 'HR面', 'Offer'];
+        const flow = ['未投递', '投递', '笔试', '一面', '二面', '三面', '四面', '五面', '六面', 'Offer'];
         const idx = flow.indexOf(p.status);
         if (idx >= 0 && idx < flow.length - 1) {
             DataStore.updatePosition(id, { status: flow[idx + 1] });
@@ -1060,7 +1064,7 @@ const app = {
     },
 
     getAnalyticsStages() {
-        return ['未投递', '投递', '笔试', '一面', '二面', '三面', 'HR面', 'Offer', '接受'];
+        return ['未投递', '投递', '笔试', '一面', '二面', '三面', '四面', '五面', '六面', 'Offer', '接受'];
     },
 
     buildKnowledgeBlindSpots() {
@@ -1159,7 +1163,7 @@ const app = {
             let t = this.getPositionType(p.title || '');
             if (!typeMap[t]) typeMap[t] = { total: 0, iv: 0, offer: 0 };
             typeMap[t].total++;
-            if (['一面','二面','三面','HR面','Offer','接受'].includes(p.status)) typeMap[t].iv++;
+            if (['一面','二面','三面','四面','五面','六面','Offer','接受'].includes(p.status === 'HR面' ? '四面' : p.status)) typeMap[t].iv++;
             if (['Offer','接受'].includes(p.status)) typeMap[t].offer++;
         });
 
@@ -1548,7 +1552,7 @@ const app = {
                     <div class="form-group"><label>所属公司</label><select id="m-pos-company">${this.data.companies.map(c => `<option value="${this.escapeHTML(c.id)}" ${companyId===c.id?'selected':''}>${this.escapeHTML(c.name)}</option>`).join('')}</select></div>
                 </div>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-                    <div class="form-group"><label>状态</label><select id="m-pos-status">${['未投递','投递','笔试','一面','二面','三面','HR面','Offer','拒绝','接受'].map(s => `<option value="${s}" ${p.status===s || (!isEdit && s==='未投递')?'selected':''}>${s}</option>`).join('')}</select></div>
+                    <div class="form-group"><label>状态</label><select id="m-pos-status">${['未投递','投递','笔试','一面','二面','三面','四面','五面','六面','Offer','拒绝','接受'].map(s => `<option value="${s}" ${(p.status === 'HR面' ? '四面' : p.status)===s || (!isEdit && s==='未投递')?'selected':''}>${s}</option>`).join('')}</select></div>
                     <div class="form-group"><label>意愿度</label><div class="star-rating" id="m-pos-stars"></div><input type="hidden" id="m-pos-priority" value="${this.escapeHTML(p.priority || 3)}"></div>
                 </div>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
@@ -1606,7 +1610,7 @@ const app = {
             title.textContent = ivId ? '编辑面试' : '记录面试';
             body.innerHTML = `<input type="hidden" id="m-iv-id" value="${this.escapeHTML(ivId || '')}"><input type="hidden" id="m-iv-pos" value="${this.escapeHTML(posId || '')}">
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-                    <div class="form-group"><label>轮次</label><select id="m-iv-round">${['笔试','一面','二面','三面','HR面','其他'].map(r => `<option value="${r}" ${iv.round===r?'selected':''}>${r}</option>`).join('')}</select></div>
+                    <div class="form-group"><label>轮次</label><select id="m-iv-round">${['笔试','一面','二面','三面','四面','五面','六面','其他'].map(r => `<option value="${r}" ${(iv.round === 'HR面' ? '四面' : iv.round)===r?'selected':''}>${r}</option>`).join('')}</select></div>
                     <div class="form-group"><label>日期</label><input type="date" id="m-iv-date" value="${this.escapeHTML(iv.date || new Date().toISOString().split('T')[0])}"></div>
                 </div>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">

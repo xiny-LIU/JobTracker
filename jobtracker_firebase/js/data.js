@@ -29,6 +29,10 @@ const DataStore = {
         };
     },
 
+    normalizeRoundOrStatus(value) {
+        return value === 'HR面' ? '四面' : value;
+    },
+
     normalize(data) {
         const base = this.getDefault();
         const safe = data && typeof data === 'object' ? data : {};
@@ -39,10 +43,16 @@ const DataStore = {
                 city: company.city || ''
             }))
             : [];
-        const positions = Array.isArray(safe.positions) ? safe.positions : [];
+        const positions = Array.isArray(safe.positions)
+            ? safe.positions.map(position => ({
+                ...position,
+                status: this.normalizeRoundOrStatus(position.status)
+            }))
+            : [];
         const interviews = Array.isArray(safe.interviews)
             ? safe.interviews.map(interview => ({
                 ...interview,
+                round: this.normalizeRoundOrStatus(interview.round),
                 qaPairs: this.normalizeQAPairs(interview),
                 formatNote: interview.formatNote || interview.interviewFormatNote || ''
             }))
@@ -68,7 +78,7 @@ const DataStore = {
         const interviewId = activity.interviewId || '';
         const interview = interviews.find(i => i.id === interviewId);
         const createdAt = activity.createdAt || activity.timestamp || activity.date || new Date().toISOString();
-        const type = activity.type || '其他';
+        const type = this.normalizeRoundOrStatus(activity.type || '其他');
         const detail = activity.detail || activity.notes || '';
         const stableId = `a_legacy_${index}_${String(jobId || activity.companyId || 'none').replace(/\W/g, '')}_${String(createdAt).replace(/\W/g, '')}_${String(type).replace(/\W/g, '')}`;
         return {
@@ -195,8 +205,8 @@ const DataStore = {
             }, null, null, null, data);
         }
         if (pos && !['Offer','拒绝','接受'].includes(pos.status)) {
-            const map = { '笔试': '笔试', '一面': '一面', '二面': '二面', '三面': '三面', 'HR面': 'HR面' };
-            const flow = ['未投递', '投递', '笔试', '一面', '二面', '三面', 'HR面', 'Offer', '接受'];
+            const map = { '笔试': '笔试', '一面': '一面', '二面': '二面', '三面': '三面', '四面': '四面', '五面': '五面', '六面': '六面', 'HR面': '四面' };
+            const flow = ['未投递', '投递', '笔试', '一面', '二面', '三面', '四面', '五面', '六面', 'Offer', '接受'];
             const targetStatus = map[interview.round];
             const shouldAdvance = targetStatus && flow.indexOf(targetStatus) >= flow.indexOf(pos.status);
             if (interview.syncJobStatus && shouldAdvance && pos.status !== targetStatus) {
@@ -234,8 +244,8 @@ const DataStore = {
             next.qaPairs = this.normalizeQAPairs(next);
             data.interviews[idx] = next;
             const pos = data.positions.find(p => p.id === next.positionId);
-            const map = { '笔试': '笔试', '一面': '一面', '二面': '二面', '三面': '三面', 'HR面': 'HR面' };
-            const flow = ['未投递', '投递', '笔试', '一面', '二面', '三面', 'HR面', 'Offer', '接受'];
+            const map = { '笔试': '笔试', '一面': '一面', '二面': '二面', '三面': '三面', '四面': '四面', '五面': '五面', '六面': '六面', 'HR面': '四面' };
+            const flow = ['未投递', '投递', '笔试', '一面', '二面', '三面', '四面', '五面', '六面', 'Offer', '接受'];
             const targetStatus = map[next.round];
             const shouldAdvance = pos && targetStatus && flow.indexOf(targetStatus) >= flow.indexOf(pos.status);
             if (pos && next.syncJobStatus && shouldAdvance && !['Offer','拒绝','接受'].includes(pos.status) && pos.status !== targetStatus) {
