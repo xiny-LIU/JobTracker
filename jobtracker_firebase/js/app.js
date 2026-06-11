@@ -85,6 +85,37 @@ const app = {
         }[ch]));
     },
 
+    normalizeSearchText(value) {
+        return String(value || '')
+            .toLowerCase()
+            .replace(/\s+/g, ' ')
+            .trim();
+    },
+
+    getCompanySearchText(company) {
+        return this.normalizeSearchText([
+            company?.name,
+            company?.industry,
+            company?.scale,
+            company?.city,
+            company?.website,
+            company?.notes,
+            company?.background
+        ].join(' '));
+    },
+
+    getPositionSearchText(position) {
+        const resume = this.data.resumes.find(r => r.id === position.resumeId);
+        return this.normalizeSearchText([
+            position?.title,
+            position?.location,
+            position?.salary,
+            position?.jd,
+            position?.status,
+            resume?.name
+        ].join(' '));
+    },
+
     renderMarkdown(text) {
         const source = String(text || '').replace(/\r\n/g, '\n').trim();
         if (!source) return '<div class="markdown-empty">暂无</div>';
@@ -411,19 +442,16 @@ const app = {
     },
 
     renderPositions() {
-        const search = document.getElementById('pos-search').value.toLowerCase();
+        const searchKeyword = this.normalizeSearchText(document.getElementById('pos-search').value);
         const status = document.getElementById('pos-status').value;
         const priority = document.getElementById('pos-priority').value;
-        const isOrderingDisabled = Boolean(search.trim() || status || priority);
-        const filterKey = `${search.trim()}|${status}|${priority}`;
+        const isOrderingDisabled = Boolean(searchKeyword || status || priority);
+        const filterKey = `${searchKeyword}|${status}|${priority}`;
 
         const filterJobs = (jobs, companyMatched = false) => {
             let filtered = [...jobs];
-            if (search && !companyMatched) {
-                filtered = filtered.filter(p => {
-                    const haystack = `${p.title || ''}${p.location || ''}${p.salary || ''}${p.jd || ''}`.toLowerCase();
-                    return haystack.includes(search);
-                });
+            if (searchKeyword && !companyMatched) {
+                filtered = filtered.filter(p => this.getPositionSearchText(p).includes(searchKeyword));
             }
             if (status) filtered = filtered.filter(p => p.status === status);
             if (priority) filtered = filtered.filter(p => p.priority === parseInt(priority));
@@ -431,11 +459,10 @@ const app = {
         };
 
         const companies = this.getSortedCompanies().filter(company => {
-            const companyHaystack = `${company.name || ''}${company.industry || ''}${company.scale || ''}${company.city || ''}${company.notes || ''}${company.background || ''}`.toLowerCase();
-            const companyMatched = search && companyHaystack.includes(search);
+            const companyMatched = searchKeyword && this.getCompanySearchText(company).includes(searchKeyword);
             const jobs = this.getCompanyJobs(company.id);
             const filteredJobs = filterJobs(jobs, companyMatched);
-            if (!search && !status && !priority) return true;
+            if (!searchKeyword && !status && !priority) return true;
             return companyMatched || filteredJobs.length > 0;
         });
         this.renderedCompanyIds = companies.map(c => c.id);
@@ -461,8 +488,7 @@ const app = {
                 const companyDomId = this.escapeHTML(c.id);
                 const isFirst = index === 0;
                 const isLast = index === companies.length - 1;
-                const companyHaystack = `${c.name || ''}${c.industry || ''}${c.scale || ''}${c.city || ''}${c.notes || ''}${c.background || ''}`.toLowerCase();
-                const companyMatched = search && companyHaystack.includes(search);
+                const companyMatched = searchKeyword && this.getCompanySearchText(c).includes(searchKeyword);
                 const companyJobs = filterJobs(allCompanyJobs, companyMatched);
                 const highestStatus = this.getCompanyHighestStatus(c);
                 const badgeClass = this.safeBadgeClass(highestStatus);
@@ -475,7 +501,10 @@ const app = {
                 const downDisabled = isOrderingDisabled || isLast ? 'disabled' : '';
                 
                 // 渲染岗位卡片
-                const jobsHtml = companyJobs.map(p => {
+                const emptyJobsHtml = searchKeyword || status || priority
+                    ? '<div class="expanded-jobs-empty">暂无符合条件的岗位</div>'
+                    : '<div class="expanded-jobs-empty">暂无岗位，点击添加岗位创建第一个岗位</div>';
+                const jobsHtml = companyJobs.length ? companyJobs.map(p => {
                     const r = this.data.resumes.find(x => x.id === p.resumeId);
                     const ivs = this.data.interviews.filter(i => i.positionId === p.id).sort((a,b) => new Date(b.date) - new Date(a.date));
                     const last = ivs[0];
@@ -501,7 +530,7 @@ const app = {
                             </div>
                         </div>
                     </div>`;
-                }).join('') || '<div class="expanded-jobs-empty">暂无岗位，点击添加岗位创建第一个岗位</div>';
+                }).join('') : emptyJobsHtml;
                 
                 return `<div class="company-accordion-item ${isExpanded ? 'is-expanded' : ''}" data-company-id="${companyDomId}">
                 <div class="company-card company-accordion-card ${isExpanded ? 'expanded' : ''}" onclick="app.toggleCompanyJobs('${companyId}', event)">
@@ -1381,7 +1410,7 @@ const app = {
     },
 
     openModal(type, id = null, presetCompanyId = '', options = {}) {
-        const keepDetailOpen = options.keepDetailOpen === true;
+        const keepDetailOpen = options.keepDetailOpen === true || (type === 'interview' && !!this.currentDetail);
         // 如果详情页打开了，先关闭它
         const detailBackdrop = document.getElementById('detail-backdrop');
         if (!keepDetailOpen && detailBackdrop && !detailBackdrop.classList.contains('hidden')) {
@@ -1767,6 +1796,9 @@ const app = {
         const id = document.getElementById('m-iv-id').value;
         const posId = document.getElementById('m-iv-pos').value;
         const qaPairs = this.collectQAPairs();
+        const detailBackdrop = document.getElementById('detail-backdrop');
+        const detailWasOpen = detailBackdrop && !detailBackdrop.classList.contains('hidden') && this.currentDetail;
+        const detailPositionId = this.currentDetail?.id || posId || '';
         const data = {
             positionId: posId,
             round: document.getElementById('m-iv-round').value,
@@ -1784,10 +1816,9 @@ const app = {
         };
         if (id) DataStore.updateInterview(id, data);
         else DataStore.addInterview(data);
-        const detailPositionId = this.currentDetail?.id || '';
         this.data = DataStore.get();
         this.closeModal();
-        if (detailPositionId) this.openDetail(detailPositionId);
+        if (detailWasOpen && detailPositionId) this.openDetail(detailPositionId);
         else this.renderPositions();
         this.backgroundSync();
         this.showToast(id ? '面试记录已保存' : '面试记录已新增');
@@ -1797,11 +1828,13 @@ const app = {
         const id = document.getElementById('m-iv-id').value;
         const posId = document.getElementById('m-iv-pos').value;
         if (!id || !confirm('确定删除此面试记录？')) return;
-        DataStore.deleteInterview(id);
+        const detailBackdrop = document.getElementById('detail-backdrop');
+        const detailWasOpen = detailBackdrop && !detailBackdrop.classList.contains('hidden') && this.currentDetail;
         const detailPositionId = this.currentDetail?.id || posId || '';
+        DataStore.deleteInterview(id);
         this.data = DataStore.get();
         this.closeModal();
-        if (detailPositionId && this.currentDetail) this.openDetail(detailPositionId);
+        if (detailWasOpen && detailPositionId) this.openDetail(detailPositionId);
         else this.renderPositions();
         this.backgroundSync();
         this.showToast('面试记录已删除', 'warn');
@@ -1821,7 +1854,7 @@ const app = {
         const detailOpen = detailBackdrop && !detailBackdrop.classList.contains('hidden');
         this.openModal('interview', positionId, interviewId, {
             ...options,
-            keepDetailOpen: options.keepDetailOpen === true || detailOpen
+            keepDetailOpen: options.keepDetailOpen === true || detailOpen || !!this.currentDetail
         });
     },
 
