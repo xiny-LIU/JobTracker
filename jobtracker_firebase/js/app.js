@@ -8,6 +8,27 @@ const app = {
     companySortable: null,
     lastPositionFilterKey: '',
     toastTimer: null,
+    aiEndpoint: '/api/aiChat',
+    aiState: {
+        selectedTask: 'prepare_package',
+        selectedCompanyId: '',
+        selectedPositionId: '',
+        selectedResumeId: '',
+        selectedInterviewId: '',
+        contextScopes: {
+            companyNotes: true,
+            companyBackground: true,
+            positionJD: true,
+            positionStatus: true,
+            resumeContent: true,
+            interviewQA: true,
+            interviewReview: true,
+            recentActivities: false,
+            analyticsSummary: false
+        },
+        messages: [],
+        loading: false
+    },
 
     init() {
         this.data = DataStore.get();
@@ -72,6 +93,7 @@ const app = {
         else if (this.currentView === 'positions') this.renderPositions();
         else if (this.currentView === 'resumes') this.renderResumes();
         else if (this.currentView === 'analytics') this.renderAnalytics();
+        else if (this.currentView === 'ai') this.renderAI();
         else if (this.currentView === 'settings') this.renderSettings();
     },
 
@@ -1272,6 +1294,356 @@ const app = {
                 </div>
             </div>
         `;
+    },
+
+    getAITasks() {
+        return [
+            { id: 'prepare_package', title: '生成岗位准备包', desc: '根据岗位、JD、公司背景和资料生成面试准备清单' },
+            { id: 'summarize_jd', title: '总结岗位 JD', desc: '提炼岗位职责、硬性要求、隐含考点和准备重点' },
+            { id: 'why_company', title: '生成公司选择理由', desc: '基于公司背景生成“为什么选择我们公司”的回答' },
+            { id: 'optimize_interview_answer', title: '优化面试回答', desc: '保留原意，改成更适合面试场景的表达' },
+            { id: 'followup_questions', title: '生成面试追问', desc: '按岗位和面试记录生成可反问面试官的问题' },
+            { id: 'extract_interview_points', title: '提取面试考点', desc: '从 JD、问题和复盘中提取高频知识点' },
+            { id: 'polish_resume', title: '润色资料内容', desc: '优化简历、自我介绍或求职信的表达' },
+            { id: 'weekly_review', title: '生成本周求职复盘', desc: '总结进展、风险岗位、短板和下周行动' },
+            { id: 'next_actions', title: '生成下一步行动清单', desc: '把当前求职状态拆成可执行任务' }
+        ];
+    },
+
+    ensureAIStateDefaults() {
+        if (!this.aiState.selectedTask) this.aiState.selectedTask = 'prepare_package';
+        const position = this.data.positions.find(p => p.id === this.aiState.selectedPositionId) || this.data.positions[0];
+        if (!this.aiState.selectedPositionId && position) {
+            this.aiState.selectedPositionId = position.id;
+            this.aiState.selectedCompanyId = position.companyId || '';
+            this.aiState.selectedResumeId = position.resumeId || '';
+        }
+        if (!this.aiState.selectedCompanyId) {
+            this.aiState.selectedCompanyId = position?.companyId || this.data.companies[0]?.id || '';
+        }
+        if (!this.aiState.selectedResumeId) {
+            this.aiState.selectedResumeId = position?.resumeId || this.data.resumes[0]?.id || '';
+        }
+        const interviews = this.getAISelectableInterviews();
+        if (!this.aiState.selectedInterviewId && interviews.length) {
+            this.aiState.selectedInterviewId = interviews[0].id;
+        }
+    },
+
+    renderAI() {
+        this.ensureAIStateDefaults();
+        const taskPanel = document.getElementById('ai-task-panel');
+        const chatPanel = document.getElementById('ai-chat-panel');
+        const contextPanel = document.getElementById('ai-context-panel');
+        if (!taskPanel || !chatPanel || !contextPanel) return;
+
+        const tasks = this.getAITasks();
+        const activeTask = tasks.find(t => t.id === this.aiState.selectedTask) || tasks[0];
+        const latest = this.getLatestAIContent();
+        const positions = this.data.positions;
+        const interviews = this.getAISelectableInterviews();
+        const preview = this.buildAIContext(this.aiState.selectedTask);
+        const previewText = JSON.stringify(preview, null, 2);
+
+        taskPanel.innerHTML = `<div class="ai-panel-title">快捷任务</div>
+            <div class="ai-task-list">${tasks.map(task => `<button class="ai-task-card ${task.id === this.aiState.selectedTask ? 'active' : ''}" onclick="app.setAITask('${task.id}')">
+                <strong>${this.escapeHTML(task.title)}</strong>
+                <span>${this.escapeHTML(task.desc)}</span>
+            </button>`).join('')}</div>`;
+
+        chatPanel.innerHTML = `<div class="ai-chat-head">
+                <div>
+                    <div class="ai-panel-title">${this.escapeHTML(activeTask.title)}</div>
+                    <p>${this.escapeHTML(activeTask.desc)}</p>
+                </div>
+                <div class="ai-result-actions">
+                    <button class="card-btn" onclick="app.copyAIResult()" ${latest ? '' : 'disabled'}>复制结果</button>
+                    <button class="card-btn" onclick="app.insertAIToResume()" ${latest && this.aiState.selectedResumeId ? '' : 'disabled'}>插入到资料</button>
+                    <button class="card-btn" onclick="app.insertAIToInterview()" ${latest && this.aiState.selectedInterviewId ? '' : 'disabled'}>插入到面试复盘</button>
+                    <button class="card-btn" onclick="app.createAIActivity()" ${latest ? '' : 'disabled'}>作为活动记录</button>
+                    <button class="card-btn" onclick="app.clearAIChat()">清空对话</button>
+                </div>
+            </div>
+            <div class="ai-output">
+                ${this.aiState.messages.length ? this.aiState.messages.map(m => `<div class="ai-message ${m.role}">
+                    <div class="ai-message-role">${m.role === 'assistant' ? 'AI 助手' : '你'}</div>
+                    <div class="ai-message-content">${m.role === 'assistant' ? this.renderMarkdown(m.content) : this.escapeHTML(m.content)}</div>
+                </div>`).join('') : '<div class="ai-empty-state">选择左侧任务和右侧上下文，然后点击生成。AI 结果不会自动覆盖任何已有内容。</div>'}
+                ${this.aiState.loading ? '<div class="ai-loading">AI 正在生成...</div>' : ''}
+            </div>
+            <div class="ai-input-row">
+                <textarea id="ai-user-message" placeholder="补充你的要求，或直接追问。例如：帮我把回答改得更像机械结构研发岗位候选人"></textarea>
+                <button class="btn-primary" onclick="app.runAIFromInput()" ${this.aiState.loading ? 'disabled' : ''}>${this.aiState.loading ? '生成中' : '生成'}</button>
+            </div>`;
+
+        contextPanel.innerHTML = `<div class="ai-panel-title">上下文选择</div>
+            <div class="ai-context-list">
+                <label>公司<select onchange="app.updateAISelection('selectedCompanyId', this.value)"><option value="">不发送公司</option>${this.data.companies.map(c => `<option value="${this.escapeHTML(c.id)}" ${this.aiState.selectedCompanyId === c.id ? 'selected' : ''}>${this.escapeHTML(c.name || '未命名公司')}</option>`).join('')}</select></label>
+                <label>岗位<select onchange="app.updateAISelection('selectedPositionId', this.value)"><option value="">不发送岗位</option>${positions.map(p => {
+                    const c = this.getCompany(p.companyId);
+                    return `<option value="${this.escapeHTML(p.id)}" ${this.aiState.selectedPositionId === p.id ? 'selected' : ''}>${this.escapeHTML(c?.name || '未知公司')} · ${this.escapeHTML(p.title || '未知岗位')}</option>`;
+                }).join('')}</select></label>
+                <label>资料<select onchange="app.updateAISelection('selectedResumeId', this.value)"><option value="">不发送资料</option>${this.data.resumes.map(r => `<option value="${this.escapeHTML(r.id)}" ${this.aiState.selectedResumeId === r.id ? 'selected' : ''}>${this.escapeHTML(r.name || '未命名资料')}</option>`).join('')}</select></label>
+                <label>面试记录<select onchange="app.updateAISelection('selectedInterviewId', this.value)"><option value="">不发送面试记录</option>${interviews.map(i => `<option value="${this.escapeHTML(i.id)}" ${this.aiState.selectedInterviewId === i.id ? 'selected' : ''}>${this.escapeHTML(i.round || '面试')} · ${this.escapeHTML(i.date || '未填写日期')}</option>`).join('')}</select></label>
+            </div>
+            <div class="ai-scope-box">
+                <div class="ai-context-subtitle">本次可发送内容</div>
+                ${this.renderAIContextScopeToggle('companyNotes', '公司备注')}
+                ${this.renderAIContextScopeToggle('companyBackground', '公司背景')}
+                ${this.renderAIContextScopeToggle('positionJD', '岗位 JD')}
+                ${this.renderAIContextScopeToggle('positionStatus', '岗位状态')}
+                ${this.renderAIContextScopeToggle('resumeContent', '资料内容')}
+                ${this.renderAIContextScopeToggle('interviewQA', '面试问答')}
+                ${this.renderAIContextScopeToggle('interviewReview', '面试复盘')}
+                ${this.renderAIContextScopeToggle('recentActivities', '最近活动')}
+                ${this.renderAIContextScopeToggle('analyticsSummary', '数据洞察摘要')}
+            </div>
+            <div class="ai-context-preview-head">
+                <span>将发送内容预览</span>
+                <button class="card-btn" onclick="app.copyAIContextPreview()">复制上下文</button>
+            </div>
+            <pre class="ai-context-preview">${this.escapeHTML(previewText)}</pre>`;
+    },
+
+    renderAIContextScopeToggle(key, label) {
+        return `<label class="ai-scope-row"><input type="checkbox" ${this.aiState.contextScopes[key] ? 'checked' : ''} onchange="app.toggleAIContextScope('${key}', this.checked)"> <span>${this.escapeHTML(label)}</span></label>`;
+    },
+
+    getAISelectableInterviews() {
+        const positionId = this.aiState.selectedPositionId;
+        return this.data.interviews
+            .filter(i => !positionId || i.positionId === positionId)
+            .sort((a, b) => new Date(b.date || b.createdAt || 0) - new Date(a.date || a.createdAt || 0));
+    },
+
+    setAITask(task) {
+        this.aiState.selectedTask = task;
+        this.renderAI();
+    },
+
+    updateAISelection(key, value) {
+        this.aiState[key] = value;
+        if (key === 'selectedPositionId') {
+            const p = this.data.positions.find(x => x.id === value);
+            if (p) {
+                this.aiState.selectedCompanyId = p.companyId || this.aiState.selectedCompanyId;
+                if (p.resumeId) this.aiState.selectedResumeId = p.resumeId;
+            }
+            this.aiState.selectedInterviewId = '';
+        }
+        this.renderAI();
+    },
+
+    toggleAIContextScope(key, checked) {
+        this.aiState.contextScopes[key] = checked;
+        this.renderAI();
+    },
+
+    truncateAIText(value, max = 6000) {
+        const text = String(value || '').trim();
+        if (!text) return '';
+        return text.length > max ? `${text.slice(0, max)}\n\n[内容已截断]` : text;
+    },
+
+    compactObject(value) {
+        return Object.fromEntries(Object.entries(value).filter(([, v]) => {
+            if (v === undefined || v === null || v === '') return false;
+            if (Array.isArray(v)) return v.length > 0;
+            if (typeof v === 'object') return Object.keys(v).length > 0;
+            return true;
+        }));
+    },
+
+    buildAIContext(task, userMessage = '') {
+        const scopes = this.aiState.contextScopes;
+        const company = this.data.companies.find(c => c.id === this.aiState.selectedCompanyId);
+        const position = this.data.positions.find(p => p.id === this.aiState.selectedPositionId);
+        const resume = this.data.resumes.find(r => r.id === this.aiState.selectedResumeId);
+        const interview = this.data.interviews.find(i => i.id === this.aiState.selectedInterviewId);
+        const context = { task, userMessage: this.truncateAIText(userMessage, 2000) };
+
+        if (company) {
+            context.company = this.compactObject({
+                name: company.name,
+                industry: company.industry,
+                scale: company.scale,
+                city: company.city,
+                website: company.website,
+                notes: scopes.companyNotes ? this.truncateAIText(company.notes, 2000) : '',
+                background: scopes.companyBackground ? this.truncateAIText(company.background) : ''
+            });
+        }
+        if (position) {
+            context.position = this.compactObject({
+                title: position.title,
+                status: scopes.positionStatus ? position.status : '',
+                location: position.location,
+                salary: position.salary,
+                deadline: position.deadline,
+                interviewDdl: position.interviewDdl,
+                interviewDdlNote: position.interviewDdlNote,
+                jd: scopes.positionJD ? this.truncateAIText(position.jd) : ''
+            });
+        }
+        if (resume) {
+            context.resume = this.compactObject({
+                name: resume.name,
+                type: resume.type,
+                version: resume.version,
+                target: resume.target,
+                content: scopes.resumeContent ? this.truncateAIText(resume.content || resume.fileText) : ''
+            });
+        }
+        if (interview) {
+            context.interview = this.compactObject({
+                round: interview.round,
+                date: interview.date,
+                formatNote: interview.formatNote || interview.interviewFormatNote,
+                result: interview.result,
+                qaPairs: scopes.interviewQA ? (interview.qaPairs || []) : [],
+                review: scopes.interviewReview ? this.truncateAIText(interview.notes) : ''
+            });
+        }
+        if (scopes.recentActivities && position) {
+            context.recentActivities = this.data.activities
+                .filter(a => (a.positionId || a.jobId) === position.id)
+                .sort((a, b) => new Date(b.date || b.createdAt || 0) - new Date(a.date || a.createdAt || 0))
+                .slice(0, 8)
+                .map(a => this.compactObject({ type: a.type, title: a.title, detail: this.truncateAIText(a.detail || a.notes, 600), date: a.date }));
+        }
+        if (scopes.analyticsSummary) {
+            context.analyticsSummary = this.compactObject({
+                totalPositions: this.data.positions.length,
+                activePositions: this.data.positions.filter(p => !['Offer', '接受', '拒绝'].includes(p.status)).length,
+                interviews: this.data.interviews.length,
+                offers: this.data.positions.filter(p => ['Offer', '接受'].includes(p.status)).length
+            });
+        }
+        return this.compactObject(context);
+    },
+
+    getAITaskPrompt(task, message) {
+        const prompts = {
+            prepare_package: '请根据上下文生成面试准备包，包含岗位核心要求、可能问题、项目经历准备建议、自我介绍方向和反问问题。',
+            summarize_jd: '请总结岗位 JD，提炼职责、硬性要求、隐含考点、准备优先级和风险点。',
+            why_company: '请基于公司信息生成“为什么选择这家公司”的中文面试回答，给出简短版和完整表达。',
+            optimize_interview_answer: '请优化我的面试回答，保留原意，去掉不专业表达，输出简短版和完整版本。',
+            followup_questions: '请生成适合在面试中反问面试官的问题，并按业务、团队、岗位成长分类。',
+            extract_interview_points: '请从上下文提取面试考点、薄弱项和复习建议。',
+            polish_resume: '请润色资料内容，使表达更具体、有结果导向，并保留事实边界。',
+            weekly_review: '请生成本周求职复盘，包含进展、风险岗位、面试短板和下周行动清单。',
+            next_actions: '请生成下一步行动清单，按今天、本周、可延后分组。'
+        };
+        return [prompts[task] || prompts.prepare_package, message].filter(Boolean).join('\n\n补充要求：');
+    },
+
+    async runAIFromInput() {
+        const input = document.getElementById('ai-user-message');
+        const message = input?.value.trim() || '';
+        await this.callAI(this.aiState.selectedTask, message);
+    },
+
+    async callAI(task, message) {
+        const userPrompt = this.getAITaskPrompt(task, message);
+        const context = this.buildAIContext(task, message);
+        this.aiState.messages.push({ role: 'user', content: message || userPrompt, createdAt: new Date().toISOString() });
+        this.aiState.loading = true;
+        this.renderAI();
+
+        try {
+            const res = await fetch(this.aiEndpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ task, context, message: userPrompt })
+            });
+            const data = await res.json();
+            if (!res.ok || !data.ok) throw new Error(data.error || 'AI 调用失败');
+            this.aiState.messages.push({ role: 'assistant', content: data.content || '', createdAt: new Date().toISOString() });
+            this.showToast('AI 已生成结果', 'success');
+        } catch (err) {
+            this.showToast(err.message || 'AI 调用失败', 'error');
+        } finally {
+            this.aiState.loading = false;
+            this.renderAI();
+        }
+    },
+
+    getLatestAIContent() {
+        return [...this.aiState.messages].reverse().find(m => m.role === 'assistant')?.content || '';
+    },
+
+    async copyText(text, successMessage = '已复制') {
+        if (!text) return;
+        try {
+            await navigator.clipboard.writeText(text);
+            this.showToast(successMessage);
+        } catch (e) {
+            const area = document.createElement('textarea');
+            area.value = text;
+            document.body.appendChild(area);
+            area.select();
+            document.execCommand('copy');
+            area.remove();
+            this.showToast(successMessage);
+        }
+    },
+
+    copyAIResult() {
+        this.copyText(this.getLatestAIContent(), 'AI 结果已复制');
+    },
+
+    copyAIContextPreview() {
+        this.copyText(JSON.stringify(this.buildAIContext(this.aiState.selectedTask), null, 2), '上下文预览已复制');
+    },
+
+    clearAIChat() {
+        this.aiState.messages = [];
+        this.renderAI();
+    },
+
+    insertAIToResume() {
+        const content = this.getLatestAIContent();
+        const resume = this.data.resumes.find(r => r.id === this.aiState.selectedResumeId);
+        if (!content || !resume) return;
+        if (!confirm(`将 AI 结果追加到资料「${resume.name || '未命名资料'}」末尾，确定吗？`)) return;
+        const nextContent = `${resume.content || ''}\n\n## AI 助手 ${new Date().toLocaleString()}\n\n${content}`.trim();
+        DataStore.updateResume(resume.id, { content: nextContent });
+        this.data = DataStore.get();
+        this.renderAI();
+        this.backgroundSync();
+        this.showToast('已追加到资料');
+    },
+
+    insertAIToInterview() {
+        const content = this.getLatestAIContent();
+        const interview = this.data.interviews.find(i => i.id === this.aiState.selectedInterviewId);
+        if (!content || !interview) return;
+        if (!confirm(`将 AI 结果追加到「${interview.round || '面试'}」复盘笔记末尾，确定吗？`)) return;
+        const nextNotes = `${interview.notes || ''}\n\n## AI 助手 ${new Date().toLocaleString()}\n\n${content}`.trim();
+        DataStore.updateInterview(interview.id, { notes: nextNotes });
+        this.data = DataStore.get();
+        this.renderAI();
+        this.backgroundSync();
+        this.showToast('已追加到面试复盘');
+    },
+
+    createAIActivity() {
+        const content = this.getLatestAIContent();
+        if (!content) return;
+        if (!confirm('将 AI 结果摘要保存为一条活动记录，确定吗？')) return;
+        DataStore.addManualActivity({
+            type: 'AI 助手',
+            title: 'AI 助手生成结果',
+            detail: content.length > 800 ? `${content.slice(0, 800)}...` : content,
+            companyId: this.aiState.selectedCompanyId || '',
+            positionId: this.aiState.selectedPositionId || '',
+            jobId: this.aiState.selectedPositionId || '',
+            date: new Date().toISOString().split('T')[0]
+        });
+        this.data = DataStore.get();
+        this.renderAI();
+        this.backgroundSync();
+        this.showToast('已生成活动记录');
     },
 
     renderSettings() {

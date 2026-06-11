@@ -49,6 +49,10 @@
                         <span class="nav-icon">◫</span>
                         <span>数据洞察</span>
                     </button>
+                    <button class="tab-btn" data-view="ai">
+                        <span class="nav-icon">AI</span>
+                        <span>AI 助手</span>
+                    </button>
                     <button class="tab-btn" data-view="settings">
                         <span class="nav-icon">⚙</span>
                         <span>设置系统</span>
@@ -205,6 +209,22 @@
             <div class="grid-2" id="analytics-grid"></div>
         </section>
 
+        <!-- AI 助手 -->
+        <section id="view-ai" class="view">
+            <div class="section-header">
+                <div>
+                    <h2><span class="title-icon">AI</span>AI 助手</h2>
+                    <p class="subtitle">基于岗位、公司背景、面试记录和资料内容，生成求职建议与复盘内容</p>
+                </div>
+            </div>
+
+            <div class="ai-workspace">
+                <aside class="ai-task-panel" id="ai-task-panel"></aside>
+                <section class="ai-chat-panel" id="ai-chat-panel"></section>
+                <aside class="ai-context-panel" id="ai-context-panel"></aside>
+            </div>
+        </section>
+
         <!-- 设置 -->
         <section id="view-settings" class="view">
             <div class="section-header">
@@ -267,6 +287,10 @@
         <button class="mobile-tab-btn" data-view="analytics">
             <span class="mobile-tab-icon">◫</span>
             <span>洞察</span>
+        </button>
+        <button class="mobile-tab-btn" data-view="ai">
+            <span class="mobile-tab-icon">AI</span>
+            <span>AI</span>
         </button>
         <button class="mobile-tab-btn" data-view="settings">
             <span class="mobile-tab-icon">⚙</span>
