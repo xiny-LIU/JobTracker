@@ -151,9 +151,18 @@ wrangler secret put DEEPSEEK_API_KEY
 
 然后在终端提示时粘贴 DeepSeek API Key。
 
+如果要启用 Qwen 模型，在 Cloudflare Worker 中再配置：
+
+```powershell
+wrangler secret put QWEN_API_KEY
+```
+
+Qwen 可以先不配置；前端选择 Qwen 时，Worker 会返回 `Qwen API Key 未配置`。
+
 注意：
 
 - 不要把 DeepSeek API Key 写入 `index.html`、`js/app.js`、`firebase.json` 或 Git 仓库。
+- 不要把 Qwen API Key 写入前端文件、DataStore 或 Git 仓库。
 - Worker URL 通常部署一次后保持不变。
 - 只有更换 Worker 名称、Cloudflare 账号或路由导致 URL 变化时，才需要回到 JobTracker 页面更新 AI 代理地址。
 - 更新 Worker 代码后只需要 `wrangler deploy`，不需要重新填写 Worker URL。
@@ -181,9 +190,15 @@ AI 助手支持用户手动开启联网读取 URL：
 
 - 联网默认关闭，只有用户勾选后才会读取 URL。
 - Worker 只读取 `http/https` URL。
-- 网页正文只会临时作为 AI 上下文发送给 DeepSeek，不会自动保存到 DataStore。
+- 网页正文只会临时作为 AI 上下文发送给当前选择的模型，不会自动保存到 DataStore。
 - Worker 会截断过长网页内容，避免一次发送过多文本。
 - AI 结果会尽量附带来源 URL。
+
+AI 助手还支持在页面右侧切换模型和 Gem：
+
+- DeepSeek：`deepseek-v4-flash`、`deepseek-v4-pro`
+- Qwen：`qwen-plus`、`qwen-max`、`qwen-turbo`
+- Gem 只保存名称、说明和系统提示词，随 JobTracker 数据同步；API Key 仍只保存在 Cloudflare Worker Secret。
 
 ### 8.2 部署 Firebase Hosting
 

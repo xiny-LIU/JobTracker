@@ -25,6 +25,7 @@ const DataStore = {
             resumes: [],
             interviews: [],
             activities: [],
+            aiGems: [],
             config: { token: '', gistId: '' }
         };
     },
@@ -60,6 +61,17 @@ const DataStore = {
         const activities = Array.isArray(safe.activities)
             ? safe.activities.map((activity, index) => this.normalizeActivity(activity, index, positions, interviews))
             : [];
+        const aiGems = Array.isArray(safe.aiGems)
+            ? safe.aiGems.map(gem => ({
+                ...gem,
+                id: gem.id || this.uid('gem'),
+                name: gem.name || '未命名 Gem',
+                description: gem.description || '',
+                systemPrompt: gem.systemPrompt || '',
+                createdAt: gem.createdAt || new Date().toISOString(),
+                updatedAt: gem.updatedAt || gem.createdAt || new Date().toISOString()
+            }))
+            : [];
         return {
             ...base,
             ...safe,
@@ -68,6 +80,7 @@ const DataStore = {
             resumes: Array.isArray(safe.resumes) ? safe.resumes : [],
             interviews,
             activities,
+            aiGems,
             config: { ...base.config, ...(safe.config || {}) }
         };
     },

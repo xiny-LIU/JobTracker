@@ -1,6 +1,3 @@
 name = "jobtracker-ai"
 main = "src/index.js"
 compatibility_date = "2026-06-11"
-
-[vars]
-DEEPSEEK_MODEL = "deepseek-v4-flash"

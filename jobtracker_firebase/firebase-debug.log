@@ -234,3 +234,223 @@ For CI servers and headless environments, generate a new token with firebase log
     at process.processTimers (node:internal/timers:541:7)
 [error] 
 [error] Error: An unexpected error has occurred.
+[debug] [2026-06-11T15:41:44.626Z] ----------------------------------------------------------------------
+[debug] [2026-06-11T15:41:44.638Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\Admin\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js deploy --only hosting --project jobtracker-fcdee
+[debug] [2026-06-11T15:41:44.638Z] CLI Version:   15.18.0
+[debug] [2026-06-11T15:41:44.638Z] Platform:      win32
+[debug] [2026-06-11T15:41:44.638Z] Node Version:  v24.16.0
+[debug] [2026-06-11T15:41:44.638Z] Time:          Thu Jun 11 2026 23:41:44 GMT+0800 (中国标准时间)
+[debug] [2026-06-11T15:41:44.638Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-06-11T15:41:46.264Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-06-11T15:41:46.265Z] > authorizing via signed-in user (xinyliu1029@gmail.com)
+[debug] [2026-06-11T15:41:46.265Z] [iam] checking project jobtracker-fcdee for permissions ["firebase.projects.get","firebasehosting.sites.update"]
+[debug] [2026-06-11T15:41:46.266Z] Checked if tokens are valid: false, expires at: 1781189157347
+[debug] [2026-06-11T15:41:46.266Z] Checked if tokens are valid: false, expires at: 1781189157347
+[debug] [2026-06-11T15:41:46.266Z] > refreshing access token with scopes: []
+[debug] [2026-06-11T15:41:46.268Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2026-06-11T15:41:46.268Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-06-11T15:41:46.284Z] *** [apiv2] error from fetch(https://www.googleapis.com/oauth2/v3/token, {"headers":{},"method":"POST","agent":{"_events":{},"_eventsCount":2,"options":{"noDelay":true,"path":null},"requests":{},"sockets":{"www.googleapis.com:443:::::::::::::::::::::":[]},"freeSockets":{},"keepAliveMsecs":1000,"keepAlive":false,"maxSockets":null,"maxFreeSockets":256,"scheduling":"lifo","maxTotalSockets":null,"totalSocketCount":0,"agentKeepAliveTimeoutBuffer":1000,"cache":{"max":20,"maxSize":0,"maxEntrySize":0,"fetchMethod":null,"keyMap":{},"keyList":["https:+http://127.0.0.1:9",null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],"valList":[{"_events":{},"_eventsCount":2,"options":{},"requests":{},"sockets":{"www.googleapis.com:443:::::::::::::::::::::":[]},"freeSockets":{},"keepAliveMsecs":1000,"keepAlive":false,"maxSockets":null,"maxFreeSockets":256,"scheduling":"lifo","maxTotalSockets":null,"totalSocketCount":0,"agentKeepAliveTimeoutBuffer":1000,"proxy":"http://127.0.0.1:9/","proxyHeaders":{},"connectOpts":{"ALPNProtocols":["http/1.1"],"host":"127.0.0.1","port":9}},null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],"next":{"0":0,"1":0,"2":0,"3":0,"4":0,"5":0,"6":0,"7":0,"8":0,"9":0,"10":0,"11":0,"12":0,"13":0,"14":0,"15":0,"16":0,"17":0,"18":0,"19":0},"prev":{"0":0,"1":0,"2":0,"3":0,"4":0,"5":0,"6":0,"7":0,"8":0,"9":0,"10":0,"11":0,"12":0,"13":0,"14":0,"15":0,"16":0,"17":0,"18":0,"19":0},"head":0,"tail":0,"free":{"heap":{"0":0,"1":0,"2":0,"3":0,"4":0,"5":0,"6":0,"7":0,"8":0,"9":0,"10":0,"11":0,"12":0,"13":0,"14":0,"15":0,"16":0,"17":0,"18":0,"19":0},"length":0},"initialFill":1,"size":1,"disposeAfter":null,"disposed":null,"noDisposeOnSet":false,"noUpdateTTL":false,"noDeleteOnFetchRejection":false,"allowStaleOnFetchRejection":false,"allowStaleOnFetchAbort":false,"ignoreFetchAbort":false,"allowStale":false,"noDeleteOnStaleGet":false,"updateAgeOnGet":false,"updateAgeOnHas":false,"ttlResolution":1,"ttlAutopurge":false,"ttl":0},"httpAgent":{"_events":{},"_eventsCount":2,"options":{"noDelay":true,"path":null},"defaultPort":80,"protocol":"http:","requests":{},"sockets":{},"freeSockets":{},"keepAliveMsecs":1000,"keepAlive":false,"maxSockets":null,"maxFreeSockets":256,"scheduling":"lifo","maxTotalSockets":null,"totalSocketCount":0,"agentKeepAliveTimeoutBuffer":1000},"httpsAgent":{"_events":{},"_eventsCount":2,"options":{"defaultPort":443,"protocol":"https:","noDelay":true,"path":null},"defaultPort":443,"protocol":"https:","requests":{},"sockets":{},"freeSockets":{},"keepAliveMsecs":1000,"keepAlive":false,"maxSockets":null,"maxFreeSockets":256,"scheduling":"lifo","maxTotalSockets":null,"totalSocketCount":0,"agentKeepAliveTimeoutBuffer":1000,"maxCachedSessions":100,"_sessionCache":{"map":{},"list":[]}}},"body":{"_overheadLength":545,"_valueLength":212,"_valuesToMeasure":[],"writable":false,"readable":true,"dataSize":0,"maxDataSize":2097152,"pauseStreams":true,"_released":true,"_streams":[],"_currentStream":null,"_insideLoop":false,"_pendingNext":false,"_boundary":"--------------------------aac7973fe986992343143656","_events":{},"_eventsCount":1}}): FetchError: request to https://www.googleapis.com/oauth2/v3/token failed, reason: connect ECONNREFUSED 127.0.0.1:9
+[error] Authentication Error: Your credentials are no longer valid. Please run firebase login --reauth
+
+For CI servers and headless environments, generate a new token with firebase login:ci
+[debug] [2026-06-11T15:41:46.285Z] [iam] error while checking permissions, command may fail: Authentication Error: Your credentials are no longer valid. Please run firebase login --reauth
+
+For CI servers and headless environments, generate a new token with firebase login:ci
+[debug] [2026-06-11T15:41:46.285Z] Checked if tokens are valid: false, expires at: 1781189157347
+[debug] [2026-06-11T15:41:46.285Z] Checked if tokens are valid: false, expires at: 1781189157347
+[debug] [2026-06-11T15:41:46.285Z] > refreshing access token with scopes: []
+[debug] [2026-06-11T15:41:46.285Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2026-06-11T15:41:46.286Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-06-11T15:41:46.287Z] *** [apiv2] error from fetch(https://www.googleapis.com/oauth2/v3/token, {"headers":{},"method":"POST","agent":{"_events":{},"_eventsCount":2,"options":{"noDelay":true,"path":null},"requests":{},"sockets":{"www.googleapis.com:443:::::::::::::::::::::":[]},"freeSockets":{},"keepAliveMsecs":1000,"keepAlive":false,"maxSockets":null,"maxFreeSockets":256,"scheduling":"lifo","maxTotalSockets":null,"totalSocketCount":0,"agentKeepAliveTimeoutBuffer":1000,"cache":{"max":20,"maxSize":0,"maxEntrySize":0,"fetchMethod":null,"keyMap":{},"keyList":["https:+http://127.0.0.1:9",null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],"valList":[{"_events":{},"_eventsCount":2,"options":{},"requests":{},"sockets":{"www.googleapis.com:443:::::::::::::::::::::":[]},"freeSockets":{},"keepAliveMsecs":1000,"keepAlive":false,"maxSockets":null,"maxFreeSockets":256,"scheduling":"lifo","maxTotalSockets":null,"totalSocketCount":0,"agentKeepAliveTimeoutBuffer":1000,"proxy":"http://127.0.0.1:9/","proxyHeaders":{},"connectOpts":{"ALPNProtocols":["http/1.1"],"host":"127.0.0.1","port":9}},null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],"next":{"0":0,"1":0,"2":0,"3":0,"4":0,"5":0,"6":0,"7":0,"8":0,"9":0,"10":0,"11":0,"12":0,"13":0,"14":0,"15":0,"16":0,"17":0,"18":0,"19":0},"prev":{"0":0,"1":0,"2":0,"3":0,"4":0,"5":0,"6":0,"7":0,"8":0,"9":0,"10":0,"11":0,"12":0,"13":0,"14":0,"15":0,"16":0,"17":0,"18":0,"19":0},"head":0,"tail":0,"free":{"heap":{"0":0,"1":0,"2":0,"3":0,"4":0,"5":0,"6":0,"7":0,"8":0,"9":0,"10":0,"11":0,"12":0,"13":0,"14":0,"15":0,"16":0,"17":0,"18":0,"19":0},"length":0},"initialFill":1,"size":1,"disposeAfter":null,"disposed":null,"noDisposeOnSet":false,"noUpdateTTL":false,"noDeleteOnFetchRejection":false,"allowStaleOnFetchRejection":false,"allowStaleOnFetchAbort":false,"ignoreFetchAbort":false,"allowStale":false,"noDeleteOnStaleGet":false,"updateAgeOnGet":false,"updateAgeOnHas":false,"ttlResolution":1,"ttlAutopurge":false,"ttl":0},"httpAgent":{"_events":{},"_eventsCount":2,"options":{"noDelay":true,"path":null},"defaultPort":80,"protocol":"http:","requests":{},"sockets":{},"freeSockets":{},"keepAliveMsecs":1000,"keepAlive":false,"maxSockets":null,"maxFreeSockets":256,"scheduling":"lifo","maxTotalSockets":null,"totalSocketCount":0,"agentKeepAliveTimeoutBuffer":1000},"httpsAgent":{"_events":{},"_eventsCount":2,"options":{"defaultPort":443,"protocol":"https:","noDelay":true,"path":null},"defaultPort":443,"protocol":"https:","requests":{},"sockets":{},"freeSockets":{},"keepAliveMsecs":1000,"keepAlive":false,"maxSockets":null,"maxFreeSockets":256,"scheduling":"lifo","maxTotalSockets":null,"totalSocketCount":0,"agentKeepAliveTimeoutBuffer":1000,"maxCachedSessions":100,"_sessionCache":{"map":{},"list":[]}}},"body":{"_overheadLength":545,"_valueLength":212,"_valuesToMeasure":[],"writable":false,"readable":true,"dataSize":0,"maxDataSize":2097152,"pauseStreams":true,"_released":true,"_streams":[],"_currentStream":null,"_insideLoop":false,"_pendingNext":false,"_boundary":"--------------------------609f46362ab4671d0eccee1d","_events":{},"_eventsCount":1}}): FetchError: request to https://www.googleapis.com/oauth2/v3/token failed, reason: connect ECONNREFUSED 127.0.0.1:9
+[error] Authentication Error: Your credentials are no longer valid. Please run firebase login --reauth
+
+For CI servers and headless environments, generate a new token with firebase login:ci
+[debug] [2026-06-11T15:41:46.288Z] Authentication Error: Your credentials are no longer valid. Please run firebase login --reauth
+
+For CI servers and headless environments, generate a new token with firebase login:ci
+[error] 
+[error] Error: Assertion failed: resolving hosting target of a site with no site name or target name. This should have caused an error earlier
+[debug] [2026-06-11T15:41:46.836Z] Error: EPERM: operation not permitted, open 'C:\Users\Admin\.config\configstore\firebase-tools.json.3638689383'
+    at Object.openSync (node:fs:561:18)
+    at writeFile.writeFileSync [as sync] (C:\Users\Admin\AppData\Roaming\npm\node_modules\firebase-tools\node_modules\write-file-atomic\index.js:205:13)
+    at set all (C:\Users\Admin\AppData\Roaming\npm\node_modules\firebase-tools\node_modules\configstore\index.js:61:20)
+    at Configstore.delete (C:\Users\Admin\AppData\Roaming\npm\node_modules\firebase-tools\node_modules\configstore\index.js:101:12)
+    at process.<anonymous> (C:\Users\Admin\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\cli.js:65:45)
+    at process.emit (node:events:521:24)
+    at process.exit (node:internal/process/per_thread:236:15)
+    at Timeout._onTimeout (C:\Users\Admin\AppData\Roaming\npm\node_modules\firebase-tools\lib\errorOut.js:20:17)
+    at listOnTimeout (node:internal/timers:605:17)
+    at process.processTimers (node:internal/timers:541:7)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2026-06-11T15:46:07.146Z] ----------------------------------------------------------------------
+[debug] [2026-06-11T15:46:07.148Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\Admin\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js login --reauth
+[debug] [2026-06-11T15:46:07.148Z] CLI Version:   15.18.0
+[debug] [2026-06-11T15:46:07.148Z] Platform:      win32
+[debug] [2026-06-11T15:46:07.148Z] Node Version:  v24.16.0
+[debug] [2026-06-11T15:46:07.149Z] Time:          Thu Jun 11 2026 23:46:07 GMT+0800 (中国标准时间)
+[debug] [2026-06-11T15:46:07.149Z] ----------------------------------------------------------------------
+[debug] 
+[info] 
+[info] Visit this URL on this device to log in:
+[info] https://accounts.google.com/o/oauth2/auth?client_id=563584335869-fgrhgmd47bqnekij5i8b5pr03ho849e6.apps.googleusercontent.com&scope=email%20openid%20https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcloudplatformprojects.readonly%20https%3A%2F%2Fwww.googleapis.com%2Fauth%2Ffirebase%20https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcloud-platform&response_type=code&state=389700859&redirect_uri=http%3A%2F%2Flocalhost%3A9005&login_hint=xinyliu1029%40gmail.com
+[info] 
+[info] Waiting for authentication...
+[debug] [2026-06-11T15:46:11.485Z] >>> [apiv2][query] POST https://accounts.google.com/o/oauth2/token [none]
+[debug] [2026-06-11T15:46:11.485Z] >>> [apiv2][body] POST https://accounts.google.com/o/oauth2/token [omitted]
+[debug] [2026-06-11T15:46:11.741Z] <<< [apiv2][status] POST https://accounts.google.com/o/oauth2/token 200
+[debug] [2026-06-11T15:46:11.741Z] <<< [apiv2][body] POST https://accounts.google.com/o/oauth2/token [omitted]
+[info] 
+[info] +  Success! Logged in as xinyliu1029@gmail.com 
+[debug] [2026-06-11T15:46:17.035Z] Error: Timed out.
+    at Timeout._onTimeout (C:\Users\Admin\AppData\Roaming\npm\node_modules\firebase-tools\lib\utils.js:309:49)
+    at listOnTimeout (node:internal/timers:605:17)
+    at process.processTimers (node:internal/timers:541:7)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2026-06-11T15:46:22.008Z] ----------------------------------------------------------------------
+[debug] [2026-06-11T15:46:22.010Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\Admin\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js deploy --only hosting --project jobtracker-fcdee
+[debug] [2026-06-11T15:46:22.010Z] CLI Version:   15.18.0
+[debug] [2026-06-11T15:46:22.010Z] Platform:      win32
+[debug] [2026-06-11T15:46:22.010Z] Node Version:  v24.16.0
+[debug] [2026-06-11T15:46:22.010Z] Time:          Thu Jun 11 2026 23:46:22 GMT+0800 (中国标准时间)
+[debug] [2026-06-11T15:46:22.010Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-06-11T15:46:23.217Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-06-11T15:46:23.217Z] > authorizing via signed-in user (xinyliu1029@gmail.com)
+[debug] [2026-06-11T15:46:23.217Z] [iam] checking project jobtracker-fcdee for permissions ["firebase.projects.get","firebasehosting.sites.update"]
+[debug] [2026-06-11T15:46:23.218Z] Checked if tokens are valid: true, expires at: 1781196370741
+[debug] [2026-06-11T15:46:23.218Z] Checked if tokens are valid: true, expires at: 1781196370741
+[debug] [2026-06-11T15:46:23.219Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/jobtracker-fcdee:testIamPermissions [none]
+[debug] [2026-06-11T15:46:23.219Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/jobtracker-fcdee:testIamPermissions  x-goog-user-project=jobtracker-fcdee
+[debug] [2026-06-11T15:46:23.219Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/jobtracker-fcdee:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2026-06-11T15:46:24.538Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/jobtracker-fcdee:testIamPermissions 200
+[debug] [2026-06-11T15:46:24.538Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/jobtracker-fcdee:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2026-06-11T15:46:24.538Z] Checked if tokens are valid: true, expires at: 1781196370741
+[debug] [2026-06-11T15:46:24.538Z] Checked if tokens are valid: true, expires at: 1781196370741
+[debug] [2026-06-11T15:46:24.538Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/jobtracker-fcdee [none]
+[debug] [2026-06-11T15:46:25.331Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/jobtracker-fcdee 200
+[debug] [2026-06-11T15:46:25.331Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/jobtracker-fcdee {"projectId":"jobtracker-fcdee","projectNumber":"42260314441","displayName":"JobTracker","name":"projects/jobtracker-fcdee","resources":{"hostingSite":"jobtracker-fcdee"},"state":"ACTIVE","etag":"1_d264a7fa-477e-4b66-ad53-c34f76bce335"}
+[info] 
+[info] === Deploying to 'jobtracker-fcdee'...
+[info] 
+[info] i  deploying hosting 
+[debug] [2026-06-11T15:46:25.333Z] Checked if tokens are valid: true, expires at: 1781196370741
+[debug] [2026-06-11T15:46:25.333Z] Checked if tokens are valid: true, expires at: 1781196370741
+[debug] [2026-06-11T15:46:25.334Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/jobtracker-fcdee/sites/jobtracker-fcdee [none]
+[debug] [2026-06-11T15:46:26.449Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/jobtracker-fcdee/sites/jobtracker-fcdee 200
+[debug] [2026-06-11T15:46:26.449Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/jobtracker-fcdee/sites/jobtracker-fcdee {"name":"projects/jobtracker-fcdee/sites/jobtracker-fcdee","defaultUrl":"https://jobtracker-fcdee.web.app","appId":"1:42260314441:web:cee2d0ee0522dfb0570298","type":"DEFAULT_SITE"}
+[debug] [2026-06-11T15:46:26.452Z] Checked if tokens are valid: true, expires at: 1781196370741
+[debug] [2026-06-11T15:46:26.452Z] Checked if tokens are valid: true, expires at: 1781196370741
+[debug] [2026-06-11T15:46:26.452Z] >>> [apiv2][query] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/jobtracker-fcdee/versions [none]
+[debug] [2026-06-11T15:46:26.452Z] >>> [apiv2][body] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/jobtracker-fcdee/versions {"status":"CREATED","labels":{"deployment-tool":"cli-firebase"}}
+[debug] [2026-06-11T15:46:28.006Z] <<< [apiv2][status] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/jobtracker-fcdee/versions 200
+[debug] [2026-06-11T15:46:28.006Z] <<< [apiv2][body] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/jobtracker-fcdee/versions {"name":"projects/42260314441/sites/jobtracker-fcdee/versions/fe0d7fca142d8394","status":"CREATED","config":{},"labels":{"deployment-tool":"cli-firebase"}}
+[info] i  hosting[jobtracker-fcdee]: beginning deploy... 
+[info] i  hosting[jobtracker-fcdee]: found 12 files in . 
+[debug] [2026-06-11T15:46:28.018Z] [hosting] uploading with 200 concurrency
+[debug] [2026-06-11T15:46:28.034Z] Checked if tokens are valid: true, expires at: 1781196370741
+[debug] [2026-06-11T15:46:28.034Z] Checked if tokens are valid: true, expires at: 1781196370741
+[debug] [2026-06-11T15:46:28.036Z] [hosting] hash cache [] stored for 12 files
+[debug] [2026-06-11T15:46:28.036Z] [hosting][hash queue][FINAL] {"max":12,"min":0,"avg":2.75,"active":0,"complete":12,"success":12,"errored":0,"retried":0,"total":12,"elapsed":16}
+[debug] [2026-06-11T15:46:28.036Z] >>> [apiv2][query] POST https://firebasehosting.googleapis.com/v1beta1/projects/42260314441/sites/jobtracker-fcdee/versions/fe0d7fca142d8394:populateFiles [none]
+[debug] [2026-06-11T15:46:28.036Z] >>> [apiv2][body] POST https://firebasehosting.googleapis.com/v1beta1/projects/42260314441/sites/jobtracker-fcdee/versions/fe0d7fca142d8394:populateFiles {"files":{"/FIX_REPORT.md":"d3cbcff16d25b8318120c734399e96360a99c498bf2bbe302fba27b97922bbcc","/README.md":"4ef0a700cbd6d9ef24a55fad58abc99c8b80f2dd5ffeb78da908179d14bc5cc6","/worker/.wrangler/cache/wrangler-account.json":"5ca19bed70bda06c78d7d6d621a88e427794d7f9199f35dc831d4d193ffb8c19","/image/FIREBASE_SETUP/1780643926614.png":"d73624664e56077626a9a2eec8260930efcd3f6687bc592eb18d698c41c310fc","/js/firebase-store.js":"10c5c90da19595dfe5a73487f84792671c6dd3c9fcff7781b7a11f59429fa369","/worker/wrangler.toml":"5b9a87d0dbc70601fbdf09b9036c29200b9b69940fa31e37d134e53ad0f7844a","/worker/src/index.js":"79da31cf1e81135031670d05f2b7b849ff2b59107e2bef916065b0429ddd99ed","/FIREBASE_SETUP.md":"849dc68162a6dd962c8528150169ad23edceb4a62489145c9833cd5acde1107d","/index.html":"612d1da1a3d0ebd2022a4e047c09ef5ddf06d8153453fbdc05cfa354186d66db","/js/data.js":"deba48a78d89354913eafd13250118829b5db523b47dcb51c1ea51b73fe9f3c7","/css/style.css":"89be8154de229b78e845fce4769ec8b148a1fcdc84756782b6730d87af364091","/js/app.js":"fcfbd6214619eb2fdf01756ed85cf789b43dcc74567c9f9000c1dbabda56d79d"}}
+[debug] [2026-06-11T15:46:29.297Z] <<< [apiv2][status] POST https://firebasehosting.googleapis.com/v1beta1/projects/42260314441/sites/jobtracker-fcdee/versions/fe0d7fca142d8394:populateFiles 200
+[debug] [2026-06-11T15:46:29.297Z] <<< [apiv2][body] POST https://firebasehosting.googleapis.com/v1beta1/projects/42260314441/sites/jobtracker-fcdee/versions/fe0d7fca142d8394:populateFiles {"uploadRequiredHashes":["5b9a87d0dbc70601fbdf09b9036c29200b9b69940fa31e37d134e53ad0f7844a","89be8154de229b78e845fce4769ec8b148a1fcdc84756782b6730d87af364091","fcfbd6214619eb2fdf01756ed85cf789b43dcc74567c9f9000c1dbabda56d79d","79da31cf1e81135031670d05f2b7b849ff2b59107e2bef916065b0429ddd99ed","deba48a78d89354913eafd13250118829b5db523b47dcb51c1ea51b73fe9f3c7","849dc68162a6dd962c8528150169ad23edceb4a62489145c9833cd5acde1107d","612d1da1a3d0ebd2022a4e047c09ef5ddf06d8153453fbdc05cfa354186d66db"],"uploadUrl":"https://upload-firebasehosting.googleapis.com/upload/sites/jobtracker-fcdee/versions/fe0d7fca142d8394/files"}
+[debug] [2026-06-11T15:46:29.297Z] Checked if tokens are valid: true, expires at: 1781196370741
+[debug] [2026-06-11T15:46:29.297Z] Checked if tokens are valid: true, expires at: 1781196370741
+[debug] [2026-06-11T15:46:29.297Z] Checked if tokens are valid: true, expires at: 1781196370741
+[debug] [2026-06-11T15:46:29.297Z] Checked if tokens are valid: true, expires at: 1781196370741
+[debug] [2026-06-11T15:46:29.297Z] Checked if tokens are valid: true, expires at: 1781196370741
+[debug] [2026-06-11T15:46:29.297Z] Checked if tokens are valid: true, expires at: 1781196370741
+[debug] [2026-06-11T15:46:29.297Z] Checked if tokens are valid: true, expires at: 1781196370741
+[debug] [2026-06-11T15:46:29.297Z] Checked if tokens are valid: true, expires at: 1781196370741
+[debug] [2026-06-11T15:46:29.298Z] Checked if tokens are valid: true, expires at: 1781196370741
+[debug] [2026-06-11T15:46:29.298Z] Checked if tokens are valid: true, expires at: 1781196370741
+[debug] [2026-06-11T15:46:29.298Z] Checked if tokens are valid: true, expires at: 1781196370741
+[debug] [2026-06-11T15:46:29.298Z] Checked if tokens are valid: true, expires at: 1781196370741
+[debug] [2026-06-11T15:46:29.298Z] Checked if tokens are valid: true, expires at: 1781196370741
+[debug] [2026-06-11T15:46:29.298Z] Checked if tokens are valid: true, expires at: 1781196370741
+[debug] [2026-06-11T15:46:29.298Z] >>> [apiv2][query] POST https://upload-firebasehosting.googleapis.com/upload/sites/jobtracker-fcdee/versions/fe0d7fca142d8394/files/5b9a87d0dbc70601fbdf09b9036c29200b9b69940fa31e37d134e53ad0f7844a [none]
+[debug] [2026-06-11T15:46:29.298Z] >>> [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/jobtracker-fcdee/versions/fe0d7fca142d8394/files/5b9a87d0dbc70601fbdf09b9036c29200b9b69940fa31e37d134e53ad0f7844a [stream]
+[debug] [2026-06-11T15:46:29.298Z] >>> [apiv2][query] POST https://upload-firebasehosting.googleapis.com/upload/sites/jobtracker-fcdee/versions/fe0d7fca142d8394/files/89be8154de229b78e845fce4769ec8b148a1fcdc84756782b6730d87af364091 [none]
+[debug] [2026-06-11T15:46:29.298Z] >>> [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/jobtracker-fcdee/versions/fe0d7fca142d8394/files/89be8154de229b78e845fce4769ec8b148a1fcdc84756782b6730d87af364091 [stream]
+[debug] [2026-06-11T15:46:29.299Z] >>> [apiv2][query] POST https://upload-firebasehosting.googleapis.com/upload/sites/jobtracker-fcdee/versions/fe0d7fca142d8394/files/fcfbd6214619eb2fdf01756ed85cf789b43dcc74567c9f9000c1dbabda56d79d [none]
+[debug] [2026-06-11T15:46:29.299Z] >>> [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/jobtracker-fcdee/versions/fe0d7fca142d8394/files/fcfbd6214619eb2fdf01756ed85cf789b43dcc74567c9f9000c1dbabda56d79d [stream]
+[debug] [2026-06-11T15:46:29.299Z] >>> [apiv2][query] POST https://upload-firebasehosting.googleapis.com/upload/sites/jobtracker-fcdee/versions/fe0d7fca142d8394/files/79da31cf1e81135031670d05f2b7b849ff2b59107e2bef916065b0429ddd99ed [none]
+[debug] [2026-06-11T15:46:29.299Z] >>> [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/jobtracker-fcdee/versions/fe0d7fca142d8394/files/79da31cf1e81135031670d05f2b7b849ff2b59107e2bef916065b0429ddd99ed [stream]
+[debug] [2026-06-11T15:46:29.299Z] >>> [apiv2][query] POST https://upload-firebasehosting.googleapis.com/upload/sites/jobtracker-fcdee/versions/fe0d7fca142d8394/files/deba48a78d89354913eafd13250118829b5db523b47dcb51c1ea51b73fe9f3c7 [none]
+[debug] [2026-06-11T15:46:29.299Z] >>> [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/jobtracker-fcdee/versions/fe0d7fca142d8394/files/deba48a78d89354913eafd13250118829b5db523b47dcb51c1ea51b73fe9f3c7 [stream]
+[debug] [2026-06-11T15:46:29.300Z] >>> [apiv2][query] POST https://upload-firebasehosting.googleapis.com/upload/sites/jobtracker-fcdee/versions/fe0d7fca142d8394/files/849dc68162a6dd962c8528150169ad23edceb4a62489145c9833cd5acde1107d [none]
+[debug] [2026-06-11T15:46:29.300Z] >>> [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/jobtracker-fcdee/versions/fe0d7fca142d8394/files/849dc68162a6dd962c8528150169ad23edceb4a62489145c9833cd5acde1107d [stream]
+[debug] [2026-06-11T15:46:29.300Z] >>> [apiv2][query] POST https://upload-firebasehosting.googleapis.com/upload/sites/jobtracker-fcdee/versions/fe0d7fca142d8394/files/612d1da1a3d0ebd2022a4e047c09ef5ddf06d8153453fbdc05cfa354186d66db [none]
+[debug] [2026-06-11T15:46:29.300Z] >>> [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/jobtracker-fcdee/versions/fe0d7fca142d8394/files/612d1da1a3d0ebd2022a4e047c09ef5ddf06d8153453fbdc05cfa354186d66db [stream]
+[debug] [2026-06-11T15:46:29.300Z] [hosting][populate queue][FINAL] {"max":1264,"min":1264,"avg":1264,"active":0,"complete":1,"success":1,"errored":0,"retried":0,"total":1,"elapsed":1266}
+[debug] [2026-06-11T15:46:29.301Z] [hosting] uploads queued: 7
+[debug] [2026-06-11T15:46:31.008Z] <<< [apiv2][status] POST https://upload-firebasehosting.googleapis.com/upload/sites/jobtracker-fcdee/versions/fe0d7fca142d8394/files/612d1da1a3d0ebd2022a4e047c09ef5ddf06d8153453fbdc05cfa354186d66db 200
+[debug] [2026-06-11T15:46:31.008Z] <<< [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/jobtracker-fcdee/versions/fe0d7fca142d8394/files/612d1da1a3d0ebd2022a4e047c09ef5ddf06d8153453fbdc05cfa354186d66db [stream]
+[debug] [2026-06-11T15:46:31.030Z] <<< [apiv2][status] POST https://upload-firebasehosting.googleapis.com/upload/sites/jobtracker-fcdee/versions/fe0d7fca142d8394/files/fcfbd6214619eb2fdf01756ed85cf789b43dcc74567c9f9000c1dbabda56d79d 200
+[debug] [2026-06-11T15:46:31.030Z] <<< [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/jobtracker-fcdee/versions/fe0d7fca142d8394/files/fcfbd6214619eb2fdf01756ed85cf789b43dcc74567c9f9000c1dbabda56d79d [stream]
+[debug] [2026-06-11T15:46:31.036Z] <<< [apiv2][status] POST https://upload-firebasehosting.googleapis.com/upload/sites/jobtracker-fcdee/versions/fe0d7fca142d8394/files/5b9a87d0dbc70601fbdf09b9036c29200b9b69940fa31e37d134e53ad0f7844a 200
+[debug] [2026-06-11T15:46:31.036Z] <<< [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/jobtracker-fcdee/versions/fe0d7fca142d8394/files/5b9a87d0dbc70601fbdf09b9036c29200b9b69940fa31e37d134e53ad0f7844a [stream]
+[debug] [2026-06-11T15:46:31.049Z] <<< [apiv2][status] POST https://upload-firebasehosting.googleapis.com/upload/sites/jobtracker-fcdee/versions/fe0d7fca142d8394/files/deba48a78d89354913eafd13250118829b5db523b47dcb51c1ea51b73fe9f3c7 200
+[debug] [2026-06-11T15:46:31.049Z] <<< [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/jobtracker-fcdee/versions/fe0d7fca142d8394/files/deba48a78d89354913eafd13250118829b5db523b47dcb51c1ea51b73fe9f3c7 [stream]
+[debug] [2026-06-11T15:46:31.079Z] <<< [apiv2][status] POST https://upload-firebasehosting.googleapis.com/upload/sites/jobtracker-fcdee/versions/fe0d7fca142d8394/files/89be8154de229b78e845fce4769ec8b148a1fcdc84756782b6730d87af364091 200
+[debug] [2026-06-11T15:46:31.079Z] <<< [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/jobtracker-fcdee/versions/fe0d7fca142d8394/files/89be8154de229b78e845fce4769ec8b148a1fcdc84756782b6730d87af364091 [stream]
+[debug] [2026-06-11T15:46:31.090Z] <<< [apiv2][status] POST https://upload-firebasehosting.googleapis.com/upload/sites/jobtracker-fcdee/versions/fe0d7fca142d8394/files/849dc68162a6dd962c8528150169ad23edceb4a62489145c9833cd5acde1107d 200
+[debug] [2026-06-11T15:46:31.090Z] <<< [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/jobtracker-fcdee/versions/fe0d7fca142d8394/files/849dc68162a6dd962c8528150169ad23edceb4a62489145c9833cd5acde1107d [stream]
+[debug] [2026-06-11T15:46:31.241Z] <<< [apiv2][status] POST https://upload-firebasehosting.googleapis.com/upload/sites/jobtracker-fcdee/versions/fe0d7fca142d8394/files/79da31cf1e81135031670d05f2b7b849ff2b59107e2bef916065b0429ddd99ed 200
+[debug] [2026-06-11T15:46:31.241Z] <<< [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/jobtracker-fcdee/versions/fe0d7fca142d8394/files/79da31cf1e81135031670d05f2b7b849ff2b59107e2bef916065b0429ddd99ed [stream]
+[debug] [2026-06-11T15:46:31.241Z] [hosting][upload queue][FINAL] {"max":1944,"min":1710,"avg":1778.857142857143,"active":0,"complete":7,"success":7,"errored":0,"retried":0,"total":7,"elapsed":1944}
+[info] +  hosting[jobtracker-fcdee]: file upload complete 
+[debug] [2026-06-11T15:46:31.242Z] [hosting] deploy completed after 3234ms
+[debug] [2026-06-11T15:46:31.242Z] [
+  {
+    "config": {
+      "public": ".",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**"
+      ],
+      "rewrites": [
+        {
+          "source": "**",
+          "destination": "/index.html"
+        }
+      ],
+      "site": "jobtracker-fcdee"
+    },
+    "version": "projects/42260314441/sites/jobtracker-fcdee/versions/fe0d7fca142d8394"
+  }
+]
+[info] i  hosting[jobtracker-fcdee]: finalizing version... 
+[debug] [2026-06-11T15:46:31.243Z] Checked if tokens are valid: true, expires at: 1781196370741
+[debug] [2026-06-11T15:46:31.243Z] Checked if tokens are valid: true, expires at: 1781196370741
+[debug] [2026-06-11T15:46:31.243Z] >>> [apiv2][query] PATCH https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/jobtracker-fcdee/versions/fe0d7fca142d8394 updateMask=status%2Cconfig
+[debug] [2026-06-11T15:46:31.243Z] >>> [apiv2][body] PATCH https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/jobtracker-fcdee/versions/fe0d7fca142d8394 {"status":"FINALIZED","config":{"rewrites":[{"glob":"**","path":"/index.html"}]}}
+[debug] [2026-06-11T15:46:32.442Z] <<< [apiv2][status] PATCH https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/jobtracker-fcdee/versions/fe0d7fca142d8394 200
+[debug] [2026-06-11T15:46:32.442Z] <<< [apiv2][body] PATCH https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/jobtracker-fcdee/versions/fe0d7fca142d8394 {"name":"projects/42260314441/sites/jobtracker-fcdee/versions/fe0d7fca142d8394","status":"FINALIZED","config":{"rewrites":[{"glob":"**","path":"/index.html"}]},"labels":{"deployment-tool":"cli-firebase"},"createTime":"2026-06-11T15:46:27.488637Z","createUser":{"email":"xinyliu1029@gmail.com"},"finalizeTime":"2026-06-11T15:46:32.509659Z","finalizeUser":{"email":"xinyliu1029@gmail.com"}}
+[debug] [2026-06-11T15:46:32.442Z] [hosting] finalized version for jobtracker-fcdee:[object Object]
+[info] +  hosting[jobtracker-fcdee]: version finalized 
+[info] i  hosting[jobtracker-fcdee]: releasing new version... 
+[debug] [2026-06-11T15:46:32.442Z] Checked if tokens are valid: true, expires at: 1781196370741
+[debug] [2026-06-11T15:46:32.442Z] Checked if tokens are valid: true, expires at: 1781196370741
+[debug] [2026-06-11T15:46:32.443Z] >>> [apiv2][query] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/jobtracker-fcdee/channels/live/releases versionName=projects%2F42260314441%2Fsites%2Fjobtracker-fcdee%2Fversions%2Ffe0d7fca142d8394
+[debug] [2026-06-11T15:46:32.443Z] >>> [apiv2][body] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/jobtracker-fcdee/channels/live/releases {}
+[debug] [2026-06-11T15:46:33.644Z] <<< [apiv2][status] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/jobtracker-fcdee/channels/live/releases 200
+[debug] [2026-06-11T15:46:33.644Z] <<< [apiv2][body] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/jobtracker-fcdee/channels/live/releases {"name":"projects/42260314441/sites/jobtracker-fcdee/channels/live/releases/1781192793007000","version":{"name":"projects/42260314441/sites/jobtracker-fcdee/versions/fe0d7fca142d8394","status":"FINALIZED","config":{"rewrites":[{"glob":"**","path":"/index.html"}]},"labels":{"deployment-tool":"cli-firebase"},"createTime":"2026-06-11T15:46:27.488637Z","createUser":{"email":"xinyliu1029@gmail.com","imageUrl":"https://lh3.googleusercontent.com/a/ACg8ocIlcomIs0iDrkXHQ4IFllWw2qyQAWjpSNNqJq85npq5g3Kxeg=mo"},"finalizeTime":"2026-06-11T15:46:32.509659Z","finalizeUser":{"email":"xinyliu1029@gmail.com","imageUrl":"https://lh3.googleusercontent.com/a/ACg8ocIlcomIs0iDrkXHQ4IFllWw2qyQAWjpSNNqJq85npq5g3Kxeg=mo"}},"type":"DEPLOY","releaseTime":"2026-06-11T15:46:33.007Z","releaseUser":{"email":"xinyliu1029@gmail.com","imageUrl":"https://lh3.googleusercontent.com/a/ACg8ocIlcomIs0iDrkXHQ4IFllWw2qyQAWjpSNNqJq85npq5g3Kxeg=mo"}}
+[debug] [2026-06-11T15:46:33.644Z] [hosting] release: {"name":"projects/42260314441/sites/jobtracker-fcdee/channels/live/releases/1781192793007000","version":{"name":"projects/42260314441/sites/jobtracker-fcdee/versions/fe0d7fca142d8394","status":"FINALIZED","config":{"rewrites":[{"glob":"**","path":"/index.html"}]},"labels":{"deployment-tool":"cli-firebase"},"createTime":"2026-06-11T15:46:27.488637Z","createUser":{"email":"xinyliu1029@gmail.com","imageUrl":"https://lh3.googleusercontent.com/a/ACg8ocIlcomIs0iDrkXHQ4IFllWw2qyQAWjpSNNqJq85npq5g3Kxeg=mo"},"finalizeTime":"2026-06-11T15:46:32.509659Z","finalizeUser":{"email":"xinyliu1029@gmail.com","imageUrl":"https://lh3.googleusercontent.com/a/ACg8ocIlcomIs0iDrkXHQ4IFllWw2qyQAWjpSNNqJq85npq5g3Kxeg=mo"}},"type":"DEPLOY","releaseTime":"2026-06-11T15:46:33.007Z","releaseUser":{"email":"xinyliu1029@gmail.com","imageUrl":"https://lh3.googleusercontent.com/a/ACg8ocIlcomIs0iDrkXHQ4IFllWw2qyQAWjpSNNqJq85npq5g3Kxeg=mo"}}
+[info] +  hosting[jobtracker-fcdee]: release complete 
+[info] 
+[info] +  Deploy complete! 
+[info] 
+[info] Project Console: https://console.firebase.google.com/project/jobtracker-fcdee/overview
+[info] Hosting URL: https://jobtracker-fcdee.web.app
+[debug] [2026-06-11T15:46:38.819Z] Error: Timed out.
+    at Timeout._onTimeout (C:\Users\Admin\AppData\Roaming\npm\node_modules\firebase-tools\lib\utils.js:309:49)
+    at listOnTimeout (node:internal/timers:605:17)
+    at process.processTimers (node:internal/timers:541:7)
+[error] 
+[error] Error: An unexpected error has occurred.

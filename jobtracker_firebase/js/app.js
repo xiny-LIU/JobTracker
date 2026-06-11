@@ -10,11 +10,12 @@ const app = {
     toastTimer: null,
     defaultAIEndpoint: '',
     aiState: {
-        selectedTask: 'prepare_package',
+        selectedTask: '',
         selectedCompanyId: '',
         selectedPositionId: '',
         selectedResumeId: '',
         selectedInterviewId: '',
+        tasksCollapsed: false,
         contextScopes: {
             companyNotes: true,
             companyBackground: true,
@@ -32,7 +33,15 @@ const app = {
             enabled: false,
             useCompanyWebsite: true,
             url: ''
-        }
+        },
+        webPanelOpen: false,
+        modelSettings: {
+            provider: 'deepseek',
+            model: 'deepseek-v4-flash',
+            thinking: false,
+            temperature: 0.4
+        },
+        selectedGemId: 'none'
     },
 
     init() {
@@ -1303,20 +1312,92 @@ const app = {
 
     getAITasks() {
         return [
-            { id: 'prepare_package', title: '生成岗位准备包', desc: '根据岗位、JD、公司背景和资料生成面试准备清单' },
-            { id: 'summarize_jd', title: '总结岗位 JD', desc: '提炼岗位职责、硬性要求、隐含考点和准备重点' },
-            { id: 'why_company', title: '生成公司选择理由', desc: '基于公司背景生成“为什么选择我们公司”的回答' },
-            { id: 'optimize_interview_answer', title: '优化面试回答', desc: '保留原意，改成更适合面试场景的表达' },
-            { id: 'followup_questions', title: '生成面试追问', desc: '按岗位和面试记录生成可反问面试官的问题' },
-            { id: 'extract_interview_points', title: '提取面试考点', desc: '从 JD、问题和复盘中提取高频知识点' },
-            { id: 'polish_resume', title: '润色资料内容', desc: '优化简历、自我介绍或求职信的表达' },
-            { id: 'weekly_review', title: '生成本周求职复盘', desc: '总结进展、风险岗位、短板和下周行动' },
-            { id: 'next_actions', title: '生成下一步行动清单', desc: '把当前求职状态拆成可执行任务' }
+            { id: 'prepare_package', icon: '▣', tone: 'blue', title: '生成岗位准备包', desc: '根据岗位、JD、公司背景和资料生成面试准备清单' },
+            { id: 'summarize_jd', icon: '▤', tone: 'sky', title: '总结岗位 JD', desc: '提炼岗位职责、硬性要求、隐含考点和准备重点' },
+            { id: 'why_company', icon: '▥', tone: 'purple', title: '生成公司选择理由', desc: '基于公司背景生成“为什么选择我们公司”的回答' },
+            { id: 'optimize_interview_answer', icon: '●', tone: 'teal', title: '优化面试回答', desc: '保留原意，改成更适合面试场景的表达' },
+            { id: 'followup_questions', icon: '↗', tone: 'cyan', title: '生成面试追问', desc: '按岗位和面试记录生成可反问面试官的问题' },
+            { id: 'extract_interview_points', icon: '▾', tone: 'amber', title: '提取面试考点', desc: '从 JD、问题和复盘中提取高频知识点' },
+            { id: 'polish_resume', icon: '✦', tone: 'violet', title: '润色资料内容', desc: '优化简历、自我介绍或求职信的表达' },
+            { id: 'weekly_review', icon: '▧', tone: 'indigo', title: '生成本周求职复盘', desc: '总结进展、风险岗位、短板和下周行动' },
+            { id: 'next_actions', icon: '✓', tone: 'green', title: '生成下一步行动清单', desc: '把当前求职状态拆成可执行任务' }
         ];
     },
 
+    getAIProviders() {
+        return {
+            deepseek: {
+                label: 'DeepSeek',
+                models: ['deepseek-v4-flash', 'deepseek-v4-pro'],
+                defaultModel: 'deepseek-v4-flash'
+            },
+            qwen: {
+                label: 'Qwen',
+                models: ['qwen-plus', 'qwen-max', 'qwen-turbo'],
+                defaultModel: 'qwen-plus'
+            }
+        };
+    },
+
+    getDefaultAIGems() {
+        return [
+            {
+                id: 'none',
+                builtin: true,
+                noGem: true,
+                name: '无',
+                description: '不使用任何 Gem，仅使用 JobTracker 默认求职助手提示词。',
+                systemPrompt: ''
+            },
+            {
+                id: 'career_advisor',
+                builtin: true,
+                name: '求职顾问',
+                description: '给出具体、可执行、适合应届生的求职建议。',
+                systemPrompt: '你是一名严谨、具体、鼓励型的求职顾问。请基于用户提供的上下文给出可执行建议，不要编造事实。'
+            },
+            {
+                id: 'interviewer',
+                builtin: true,
+                name: '面试官',
+                description: '站在面试官视角追问、评估和指出风险。',
+                systemPrompt: '你是一名专业面试官。请从岗位匹配度、表达清晰度、证据充分性和风险点角度评估用户材料，并给出追问。'
+            },
+            {
+                id: 'candidate',
+                builtin: true,
+                name: '面试应聘者',
+                description: '帮助把内容组织成候选人的面试回答。',
+                systemPrompt: '你是一名准备充分的面试应聘者。请把上下文转化成自然、可信、结构清晰的中文面试表达。'
+            },
+            {
+                id: 'resume_polisher',
+                builtin: true,
+                name: '简历润色官',
+                description: '强调结果、动作和岗位匹配，优化资料表达。',
+                systemPrompt: '你是一名简历润色专家。请保留事实边界，用更具体、有结果导向、匹配岗位的表达优化内容。'
+            }
+        ];
+    },
+
+    getAIGems() {
+        return [...this.getDefaultAIGems(), ...(this.data.aiGems || [])];
+    },
+
+    getSelectedAIGem() {
+        return this.getAIGems().find(gem => gem.id === this.aiState.selectedGemId) || this.getDefaultAIGems()[0];
+    },
+
     ensureAIStateDefaults() {
-        if (!this.aiState.selectedTask) this.aiState.selectedTask = 'prepare_package';
+        const providers = this.getAIProviders();
+        if (!providers[this.aiState.modelSettings.provider]) this.aiState.modelSettings.provider = 'deepseek';
+        const provider = providers[this.aiState.modelSettings.provider];
+        if (!provider.models.includes(this.aiState.modelSettings.model)) {
+            this.aiState.modelSettings.model = provider.defaultModel;
+        }
+        if (!this.getAIGems().some(gem => gem.id === this.aiState.selectedGemId)) {
+            this.aiState.selectedGemId = 'none';
+        }
         const position = this.data.positions.find(p => p.id === this.aiState.selectedPositionId) || this.data.positions[0];
         if (!this.aiState.selectedPositionId && position) {
             this.aiState.selectedPositionId = position.id;
@@ -1328,6 +1409,13 @@ const app = {
         }
         if (!this.aiState.selectedResumeId) {
             this.aiState.selectedResumeId = position?.resumeId || this.data.resumes[0]?.id || '';
+        }
+        const selectedPosition = this.data.positions.find(p => p.id === this.aiState.selectedPositionId);
+        if (this.aiState.selectedCompanyId && selectedPosition && selectedPosition.companyId !== this.aiState.selectedCompanyId) {
+            const firstCompanyPosition = this.data.positions.find(p => p.companyId === this.aiState.selectedCompanyId);
+            this.aiState.selectedPositionId = firstCompanyPosition?.id || '';
+            this.aiState.selectedResumeId = firstCompanyPosition?.resumeId || this.aiState.selectedResumeId;
+            this.aiState.selectedInterviewId = '';
         }
         const interviews = this.getAISelectableInterviews();
         if (!this.aiState.selectedInterviewId && interviews.length) {
@@ -1343,47 +1431,176 @@ const app = {
         if (!taskPanel || !chatPanel || !contextPanel) return;
 
         const tasks = this.getAITasks();
-        const activeTask = tasks.find(t => t.id === this.aiState.selectedTask) || tasks[0];
+        const activeTask = tasks.find(t => t.id === this.aiState.selectedTask);
+        const isFreeChat = !activeTask;
+        const workspace = taskPanel.closest('.ai-workspace');
+        if (workspace) workspace.classList.toggle('tasks-collapsed', Boolean(this.aiState.tasksCollapsed));
         const latest = this.getLatestAIContent();
-        const positions = this.data.positions;
-        const interviews = this.getAISelectableInterviews();
         const selectedCompany = this.data.companies.find(c => c.id === this.aiState.selectedCompanyId);
+        const positions = this.aiState.selectedCompanyId
+            ? this.data.positions.filter(p => p.companyId === this.aiState.selectedCompanyId)
+            : this.data.positions;
+        const interviews = this.getAISelectableInterviews();
+        const selectedPosition = this.data.positions.find(p => p.id === this.aiState.selectedPositionId);
+        const selectedResume = this.data.resumes.find(r => r.id === this.aiState.selectedResumeId);
+        const selectedInterview = this.data.interviews.find(i => i.id === this.aiState.selectedInterviewId);
         const webURL = this.getAIWebURL();
-        const preview = this.buildAIContext(this.aiState.selectedTask);
+        const currentTaskId = activeTask?.id || 'free_chat';
+        const preview = this.buildAIContext(currentTaskId);
         const previewText = JSON.stringify(preview, null, 2);
+        const providers = this.getAIProviders();
+        const modelSettings = this.aiState.modelSettings;
+        const currentProvider = providers[modelSettings.provider] || providers.deepseek;
+        const gems = this.getAIGems();
+        const selectedGem = this.getSelectedAIGem();
+        const customGemSelected = selectedGem && !selectedGem.builtin;
+        const deepseekThinkingEnabled = modelSettings.provider === 'deepseek' && Boolean(modelSettings.thinking);
 
-        taskPanel.innerHTML = `<div class="ai-panel-title">快捷任务</div>
+        const contextPills = [
+            selectedCompany ? { icon: '⌂', text: selectedCompany.name || '未命名公司' } : null,
+            selectedPosition ? { icon: '▱', text: selectedPosition.title || '未知岗位' } : null,
+            selectedResume ? { icon: '□', text: selectedResume.name || '未命名资料' } : null,
+            selectedInterview ? { icon: '▿', text: `${selectedInterview.round || '面试'}${selectedInterview.date ? ` · ${selectedInterview.date}` : ''}` } : null
+        ].filter(Boolean);
+        const contextPillsHtml = contextPills.length
+            ? contextPills.map(item => `<b><span>${this.escapeHTML(item.icon)}</span>${this.escapeHTML(item.text)}</b>`).join('')
+            : '<em>未选择上下文</em>';
+
+        taskPanel.innerHTML = this.aiState.tasksCollapsed
+            ? `<button class="ai-task-rail" onclick="app.toggleAITaskPanel(false)">展开任务</button>`
+            : `<div class="ai-panel-title ai-panel-title-row"><span>快捷任务</span><button class="card-btn" onclick="app.toggleAITaskPanel(true)">收起任务</button></div>
+            <button class="ai-free-task ${isFreeChat ? 'active' : ''}" onclick="app.setAITask('')">
+                <span class="ai-task-icon blue">··</span>
+                <span class="ai-task-copy">
+                    <strong>自由对话</strong>
+                    <span>直接提问、追问、讨论岗位或模拟面试</span>
+                </span>
+            </button>
             <div class="ai-task-list">${tasks.map(task => `<button class="ai-task-card ${task.id === this.aiState.selectedTask ? 'active' : ''}" onclick="app.setAITask('${task.id}')">
-                <strong>${this.escapeHTML(task.title)}</strong>
-                <span>${this.escapeHTML(task.desc)}</span>
+                <span class="ai-task-icon ${this.escapeHTML(task.tone || 'blue')}">${this.escapeHTML(task.icon || 'AI')}</span>
+                <span class="ai-task-copy">
+                    <strong>${this.escapeHTML(task.title)}</strong>
+                    <span>${this.escapeHTML(task.desc)}</span>
+                </span>
             </button>`).join('')}</div>`;
 
-        chatPanel.innerHTML = `<div class="ai-chat-head">
+        const chatHeadHtml = isFreeChat
+            ? `<div class="ai-free-chat-head">
+                <div class="ai-free-title-row">
+                    <div class="ai-free-title">
+                        <span class="ai-chat-title-icon">☰</span>
+                        <strong>自由对话</strong>
+                        <small>自由提问，AI 会结合右侧已选上下文回答</small>
+                    </div>
+                    <button class="ai-mode-switch" onclick="app.setAITask('prepare_package')">切换为任务模式</button>
+                </div>
+                <div class="ai-context-pills">
+                    <span>当前使用上下文：</span>
+                    ${contextPillsHtml}
+                    <button class="ai-context-detail-btn" onclick="app.copyAIContextPreview()">查看详情</button>
+                </div>
+            </div>`
+            : `<div class="ai-chat-head ai-task-mode-head">
                 <div>
-                    <div class="ai-panel-title">${this.escapeHTML(activeTask.title)}</div>
+                    <div class="ai-chat-title"><span class="ai-chat-title-icon">${this.escapeHTML(activeTask.icon || '✦')}</span>${this.escapeHTML(activeTask.title)}</div>
                     <p>${this.escapeHTML(activeTask.desc)}</p>
                 </div>
                 <div class="ai-result-actions">
-                    <button class="card-btn" onclick="app.copyAIResult()" ${latest ? '' : 'disabled'}>复制结果</button>
-                    <button class="card-btn" onclick="app.insertAIToResume()" ${latest && this.aiState.selectedResumeId ? '' : 'disabled'}>插入到资料</button>
-                    <button class="card-btn" onclick="app.insertAIToInterview()" ${latest && this.aiState.selectedInterviewId ? '' : 'disabled'}>插入到面试复盘</button>
-                    <button class="card-btn" onclick="app.createAIActivity()" ${latest ? '' : 'disabled'}>作为活动记录</button>
-                    <button class="card-btn" onclick="app.clearAIChat()">清空对话</button>
+                    <button class="ai-head-action" onclick="app.clearAIChat()">⊘ 重置结果</button>
+                    <button class="ai-head-action" onclick="app.insertAIToResume()" ${latest && this.aiState.selectedResumeId ? '' : 'disabled'}>▣ 导入资料库</button>
+                    <button class="ai-head-action" onclick="app.insertAIToInterview()" ${latest && this.aiState.selectedInterviewId ? '' : 'disabled'}>⊞ 插入面试信息</button>
+                    <button class="ai-head-action" onclick="app.useAIAsFollowup()" ${latest ? '' : 'disabled'}>⚑ 作为追问</button>
                 </div>
-            </div>
+            </div>`;
+
+        chatPanel.innerHTML = `${chatHeadHtml}
             <div class="ai-output">
                 ${this.aiState.messages.length ? this.aiState.messages.map(m => `<div class="ai-message ${m.role}">
                     <div class="ai-message-role">${m.role === 'assistant' ? 'AI 助手' : '你'}</div>
                     <div class="ai-message-content">${m.role === 'assistant' ? this.renderMarkdown(m.content) : this.escapeHTML(m.content)}</div>
-                </div>`).join('') : '<div class="ai-empty-state">选择左侧任务和右侧上下文，然后点击生成。AI 结果不会自动覆盖任何已有内容。</div>'}
+                </div>`).join('') : `<div class="ai-empty-state">
+                    <div class="ai-empty-illustration">
+                        <div class="ai-empty-paper"></div>
+                        <div class="ai-empty-bucket"></div>
+                    </div>
+                    <strong>${isFreeChat ? '你好！我是你的求职助手' : '选择左侧任务，或在下方输入你的需求'}</strong>
+                    <span>${isFreeChat ? '你可以直接提问，或结合右侧上下文讨论岗位、面试和资料。' : 'AI 将基于你选择的上下文，生成结构化的求职建议。'}</span>
+                    ${isFreeChat ? `<div class="ai-suggestion-grid">
+                        <button onclick="app.fillAIMessage('帮我分析一下这个岗位值不值得继续推进')">帮我分析一下这个岗位值不值得继续推进</button>
+                        <button onclick="app.fillAIMessage('结合我的简历，帮我预测这个岗位的面试难点')">结合我的简历，帮我预测这个岗位的面试难点</button>
+                        <button onclick="app.fillAIMessage('我今天做求职规划，回答得不太好，帮我优化一下')">我今天做求职规划，回答得不太好，帮我优化一下</button>
+                        <button onclick="app.fillAIMessage('根据这个岗位，帮我准备一份面试自我介绍')">根据这个岗位，帮我准备一份面试自我介绍</button>
+                    </div>` : ''}
+                </div>`}
                 ${this.aiState.loading ? '<div class="ai-loading">AI 正在生成...</div>' : ''}
             </div>
-            <div class="ai-input-row">
-                <textarea id="ai-user-message" placeholder="补充你的要求，或直接追问。例如：帮我把回答改得更像机械结构研发岗位候选人"></textarea>
-                <button class="btn-primary" onclick="app.runAIFromInput()" ${this.aiState.loading ? 'disabled' : ''}>${this.aiState.loading ? '生成中' : '生成'}</button>
+            <div class="ai-composer">
+                <textarea id="ai-user-message" maxlength="2000" placeholder="直接向 AI 提问，或补充你的要求。例如：帮我分析这个岗位是否值得继续推进" oninput="document.getElementById('ai-input-count').textContent = this.value.length + ' / 2000'"></textarea>
+                ${this.aiState.webPanelOpen ? `<div class="ai-web-popover">
+                    <div class="ai-web-popover-head"><span>联网读取（用户可选）</span><button type="button" onclick="app.toggleAIWebPanel(false)">⌃</button></div>
+                    <label class="ai-scope-row"><input type="checkbox" ${this.aiState.webAccess.enabled ? 'checked' : ''} onchange="app.updateAIWebAccess('enabled', this.checked)"> <span>启用联网读取 URL</span></label>
+                    <label class="ai-scope-row"><input type="checkbox" ${this.aiState.webAccess.useCompanyWebsite ? 'checked' : ''} onchange="app.updateAIWebAccess('useCompanyWebsite', this.checked)" ${selectedCompany?.website ? '' : 'disabled'}> <span>优先读取当前公司官网${selectedCompany?.website ? `：<a href="${this.escapeHTML(selectedCompany.website)}" target="_blank" rel="noopener">${this.escapeHTML(selectedCompany.website)}</a>` : '（当前公司未填写官网）'}</span></label>
+                    <label class="ai-web-url-label">手动 URL（可选）
+                        <input id="ai-web-url" value="${this.escapeHTML(this.aiState.webAccess.url || '')}" placeholder="https://公司官网或招聘页面" oninput="app.updateAIWebAccess('url', this.value, false)">
+                    </label>
+                    <div class="ai-web-hint">${this.aiState.webAccess.enabled && webURL ? `本次将请求：${this.escapeHTML(webURL)}` : '默认不联网；开启后才会读取 URL，网页正文只临时发给 AI。'}</div>
+                </div>` : ''}
+                <div class="ai-composer-footer">
+                    <div class="ai-composer-tools">
+                        <button class="ai-tool-toggle ${this.aiState.webPanelOpen ? 'active' : ''}" type="button" onclick="app.toggleAIWebPanel()">${this.aiState.webAccess.enabled ? '◉' : '◎'} 联网读取（用户可选）⌃</button>
+                        <button class="card-btn" type="button" onclick="app.updateAIModelSetting('thinking', !app.aiState.modelSettings.thinking)">思考模式：${modelSettings.thinking ? '开启' : '关闭'}</button>
+                        <span id="ai-input-count">0 / 2000</span>
+                    </div>
+                    <button class="btn-primary ai-generate-btn" onclick="app.runAIFromInput()" ${this.aiState.loading ? 'disabled' : ''}>${this.aiState.loading ? '生成中' : '生成'}</button>
+                </div>
             </div>`;
 
-        contextPanel.innerHTML = `<div class="ai-panel-title">上下文选择</div>
+        contextPanel.innerHTML = `<div class="ai-side-card">
+                <div class="ai-card-title"><span class="ai-section-icon">⚙</span>模型设置</div>
+                <div class="ai-model-grid">
+                    <label>模型供应商
+                        <select onchange="app.updateAIModelSetting('provider', this.value)">
+                            ${Object.entries(providers).map(([key, provider]) => `<option value="${this.escapeHTML(key)}" ${modelSettings.provider === key ? 'selected' : ''}>${this.escapeHTML(provider.label)}</option>`).join('')}
+                        </select>
+                    </label>
+                    <label>模型
+                        <select onchange="app.updateAIModelSetting('model', this.value)">
+                            ${currentProvider.models.map(model => `<option value="${this.escapeHTML(model)}" ${modelSettings.model === model ? 'selected' : ''}>${this.escapeHTML(model)}</option>`).join('')}
+                        </select>
+                    </label>
+                    <label>思考模式
+                        <select onchange="app.updateAIModelSetting('thinking', this.value === 'true')">
+                            <option value="false" ${!modelSettings.thinking ? 'selected' : ''}>关闭</option>
+                            <option value="true" ${modelSettings.thinking ? 'selected' : ''}>开启</option>
+                        </select>
+                    </label>
+                    <label>输出温度
+                        <select onchange="app.updateAIModelSetting('temperature', parseFloat(this.value))" ${deepseekThinkingEnabled ? 'disabled' : ''}>
+                            ${[0.2, 0.4, 0.7].map(temp => `<option value="${temp}" ${Number(modelSettings.temperature) === temp ? 'selected' : ''}>${temp}</option>`).join('')}
+                        </select>
+                    </label>
+                </div>
+                ${deepseekThinkingEnabled ? '<div class="ai-model-hint">思考模式下 temperature 不生效，已按官方要求忽略。</div>' : '<div class="ai-model-hint">本项目默认 temperature = 0.4，用于更稳定、专业的求职建议。</div>'}
+            </div>
+            <div class="ai-side-card ai-gem-box">
+                <div class="ai-card-title"><span class="ai-section-icon">◇</span>我的 Gem</div>
+                <label>Gem 角色
+                    <select onchange="app.setAIGem(this.value)">
+                        ${gems.map(gem => `<option value="${this.escapeHTML(gem.id)}" ${this.aiState.selectedGemId === gem.id ? 'selected' : ''}>${this.escapeHTML(gem.name || '未命名 Gem')}${gem.builtin && !gem.noGem ? '（内置）' : ''}</option>`).join('')}
+                    </select>
+                </label>
+                <div class="ai-gem-desc">${this.escapeHTML(selectedGem?.description || '选择一个 Gem 后，它只会影响 AI 的回答角色和风格。')}</div>
+                <div class="ai-gem-actions">
+                    <button class="card-btn" onclick="app.openGemModal()">新建 Gem</button>
+                    <button class="card-btn" onclick="app.openGemModal('${this.escapeJSString(selectedGem?.id || '')}')" ${customGemSelected ? '' : 'disabled'}>编辑 Gem</button>
+                </div>
+                <details class="ai-gem-preview">
+                    <summary>预览 Gem prompt</summary>
+                    <pre>${this.escapeHTML(selectedGem?.systemPrompt || '')}</pre>
+                </details>
+            </div>
+            <div class="ai-side-card">
+            <div class="ai-card-title"><span class="ai-section-icon">▤</span>上下文选择</div>
             <div class="ai-context-list">
                 <label>公司<select onchange="app.updateAISelection('selectedCompanyId', this.value)"><option value="">不发送公司</option>${this.data.companies.map(c => `<option value="${this.escapeHTML(c.id)}" ${this.aiState.selectedCompanyId === c.id ? 'selected' : ''}>${this.escapeHTML(c.name || '未命名公司')}</option>`).join('')}</select></label>
                 <label>岗位<select onchange="app.updateAISelection('selectedPositionId', this.value)"><option value="">不发送岗位</option>${positions.map(p => {
@@ -1405,20 +1622,14 @@ const app = {
                 ${this.renderAIContextScopeToggle('recentActivities', '最近活动')}
                 ${this.renderAIContextScopeToggle('analyticsSummary', '数据洞察摘要')}
             </div>
-            <div class="ai-web-box">
-                <div class="ai-context-subtitle">联网读取（用户可选）</div>
-                <label class="ai-scope-row"><input type="checkbox" ${this.aiState.webAccess.enabled ? 'checked' : ''} onchange="app.updateAIWebAccess('enabled', this.checked)"> <span>启用联网读取 URL</span></label>
-                <label class="ai-scope-row"><input type="checkbox" ${this.aiState.webAccess.useCompanyWebsite ? 'checked' : ''} onchange="app.updateAIWebAccess('useCompanyWebsite', this.checked)" ${selectedCompany?.website ? '' : 'disabled'}> <span>优先读取当前公司官网${selectedCompany?.website ? `：${this.escapeHTML(selectedCompany.website)}` : '（当前公司未填写官网）'}</span></label>
-                <label class="ai-web-url-label">手动 URL
-                    <input id="ai-web-url" value="${this.escapeHTML(this.aiState.webAccess.url || '')}" placeholder="https://公司官网或招聘页面" oninput="app.updateAIWebAccess('url', this.value, false)">
-                </label>
-                <div class="ai-web-hint">${this.aiState.webAccess.enabled && webURL ? `本次将请求：${this.escapeHTML(webURL)}` : '默认不联网；开启后才会读取 URL，网页正文只临时发给 AI。'}</div>
             </div>
+            <div class="ai-side-card">
             <div class="ai-context-preview-head">
                 <span>将发送内容预览</span>
                 <button class="card-btn" onclick="app.copyAIContextPreview()">复制上下文</button>
             </div>
-            <pre class="ai-context-preview">${this.escapeHTML(previewText)}</pre>`;
+            <pre class="ai-context-preview">${this.escapeHTML(previewText)}</pre>
+            </div>`;
 
         if (scrollToBottom) this.scrollAIOutputToBottom();
     },
@@ -1446,8 +1657,140 @@ const app = {
         this.renderAI();
     },
 
+    toggleAITaskPanel(collapsed) {
+        this.aiState.tasksCollapsed = Boolean(collapsed);
+        this.renderAI();
+    },
+
+    fillAIMessage(message) {
+        const input = document.getElementById('ai-user-message');
+        if (!input) return;
+        input.value = message;
+        const count = document.getElementById('ai-input-count');
+        if (count) count.textContent = `${message.length} / 2000`;
+        input.focus();
+    },
+
+    useAIAsFollowup() {
+        this.fillAIMessage('基于上面的结果，继续追问：');
+    },
+
+    updateAIModelSetting(key, value) {
+        const providers = this.getAIProviders();
+        if (key === 'provider') {
+            const provider = providers[value] ? value : 'deepseek';
+            this.aiState.modelSettings.provider = provider;
+            this.aiState.modelSettings.model = providers[provider].defaultModel;
+        } else if (key === 'model') {
+            const provider = providers[this.aiState.modelSettings.provider] || providers.deepseek;
+            this.aiState.modelSettings.model = provider.models.includes(value) ? value : provider.defaultModel;
+        } else if (key === 'thinking') {
+            this.aiState.modelSettings.thinking = Boolean(value);
+        } else if (key === 'temperature') {
+            this.aiState.modelSettings.temperature = [0.2, 0.4, 0.7].includes(Number(value)) ? Number(value) : 0.4;
+        }
+        this.renderAI();
+    },
+
+    setAIGem(id) {
+        this.aiState.selectedGemId = this.getAIGems().some(gem => gem.id === id) ? id : 'none';
+        this.renderAI();
+    },
+
+    openGemModal(id = '') {
+        const builtin = this.getDefaultAIGems().find(gem => gem.id === id);
+        const custom = (this.data.aiGems || []).find(gem => gem.id === id);
+        const gem = custom || builtin || {};
+        const isCustom = Boolean(custom);
+        const isReadonly = Boolean(builtin);
+        const backdrop = document.getElementById('modal-backdrop');
+        const modal = backdrop?.querySelector('.modal');
+        const title = document.getElementById('modal-title');
+        const body = document.getElementById('modal-body');
+        const footer = document.getElementById('modal-footer');
+        if (!backdrop || !title || !body || !footer) return;
+
+        modal?.classList.remove('modal-interview');
+        modal?.classList.add('modal-wide');
+        title.textContent = isReadonly ? '预览内置 Gem' : (isCustom ? '编辑 Gem' : '新建 Gem');
+        body.innerHTML = `<input type="hidden" id="m-gem-id" value="${this.escapeHTML(isCustom ? gem.id : '')}">
+            <div class="form-group"><label>名称 *</label><input id="m-gem-name" value="${this.escapeHTML(gem.name || '')}" ${isReadonly ? 'readonly' : ''} placeholder="例如：机械结构面试教练"></div>
+            <div class="form-group"><label>说明</label><input id="m-gem-desc" value="${this.escapeHTML(gem.description || '')}" ${isReadonly ? 'readonly' : ''} placeholder="简单描述这个 Gem 的用途"></div>
+            <div class="form-group"><label>指令 / 系统提示词 *</label><textarea id="m-gem-prompt" rows="12" ${isReadonly ? 'readonly' : ''} oninput="app.updateGemPromptPreview()" placeholder="写清楚 AI 的角色、语气、回答边界和输出格式">${this.escapeHTML(gem.systemPrompt || '')}</textarea></div>
+            <div class="ai-gem-modal-preview">
+                <div class="ai-context-subtitle">Prompt 预览</div>
+                <pre id="m-gem-preview">${this.escapeHTML(gem.systemPrompt || '')}</pre>
+            </div>`;
+        footer.innerHTML = `${isCustom ? '<button class="btn-danger" data-action="deleteAIGem">删除</button>' : ''}<div style="margin-left:auto;display:flex;gap:8px;"><button class="btn-secondary" data-action="closeModal">${isReadonly ? '关闭' : '取消'}</button>${isReadonly ? '' : '<button class="btn-primary" data-action="saveAIGem">保存</button>'}</div>`;
+        backdrop.classList.remove('hidden');
+        this.syncModalOpenState();
+    },
+
+    updateGemPromptPreview() {
+        const prompt = document.getElementById('m-gem-prompt')?.value || '';
+        const preview = document.getElementById('m-gem-preview');
+        if (preview) preview.textContent = prompt;
+    },
+
+    saveAIGem() {
+        const id = document.getElementById('m-gem-id')?.value || '';
+        const name = document.getElementById('m-gem-name')?.value.trim() || '';
+        const description = document.getElementById('m-gem-desc')?.value.trim() || '';
+        const systemPrompt = document.getElementById('m-gem-prompt')?.value.trim() || '';
+        if (!name) return alert('请输入 Gem 名称');
+        if (!systemPrompt) return alert('请输入 Gem 指令 / 系统提示词');
+
+        const now = new Date().toISOString();
+        const aiGems = Array.isArray(this.data.aiGems) ? [...this.data.aiGems] : [];
+        const index = aiGems.findIndex(gem => gem.id === id);
+        const nextGem = {
+            id: id || DataStore.uid('gem'),
+            name,
+            description,
+            systemPrompt,
+            createdAt: index >= 0 ? (aiGems[index].createdAt || now) : now,
+            updatedAt: now
+        };
+        if (index >= 0) aiGems[index] = nextGem;
+        else aiGems.push(nextGem);
+
+        this.data.aiGems = aiGems;
+        DataStore.set(this.data);
+        this.data = DataStore.get();
+        this.aiState.selectedGemId = nextGem.id;
+        this.closeModal();
+        this.renderAI();
+        this.backgroundSync();
+        this.showToast(index >= 0 ? 'Gem 已保存' : 'Gem 已创建');
+    },
+
+    deleteAIGem() {
+        const id = document.getElementById('m-gem-id')?.value || '';
+        if (!id || !confirm('确定删除这个 Gem？')) return;
+        this.data.aiGems = (this.data.aiGems || []).filter(gem => gem.id !== id);
+        DataStore.set(this.data);
+        this.data = DataStore.get();
+        this.aiState.selectedGemId = 'none';
+        this.closeModal();
+        this.renderAI();
+        this.backgroundSync();
+        this.showToast('Gem 已删除', 'warn');
+    },
+
     updateAISelection(key, value) {
         this.aiState[key] = value;
+        if (key === 'selectedCompanyId') {
+            const currentPosition = this.data.positions.find(p => p.id === this.aiState.selectedPositionId);
+            if (value && (!currentPosition || currentPosition.companyId !== value)) {
+                const firstCompanyPosition = this.data.positions.find(p => p.companyId === value);
+                this.aiState.selectedPositionId = firstCompanyPosition?.id || '';
+                this.aiState.selectedResumeId = firstCompanyPosition?.resumeId || this.aiState.selectedResumeId;
+                this.aiState.selectedInterviewId = '';
+            }
+            if (!value) {
+                this.aiState.selectedInterviewId = '';
+            }
+        }
         if (key === 'selectedPositionId') {
             const p = this.data.positions.find(x => x.id === value);
             if (p) {
@@ -1467,6 +1810,11 @@ const app = {
     updateAIWebAccess(key, value, shouldRender = true) {
         this.aiState.webAccess[key] = value;
         if (shouldRender) this.renderAI();
+    },
+
+    toggleAIWebPanel(force) {
+        this.aiState.webPanelOpen = typeof force === 'boolean' ? force : !this.aiState.webPanelOpen;
+        this.renderAI();
     },
 
     getAIWebURL() {
@@ -1506,8 +1854,13 @@ const app = {
         const position = this.data.positions.find(p => p.id === this.aiState.selectedPositionId);
         const resume = this.data.resumes.find(r => r.id === this.aiState.selectedResumeId);
         const interview = this.data.interviews.find(i => i.id === this.aiState.selectedInterviewId);
+        const gem = this.getSelectedAIGem();
         const webURL = this.getAIWebURL();
-        const context = { task, userMessage: this.truncateAIText(userMessage, 2000) };
+        const context = {
+            task,
+            userMessage: this.truncateAIText(userMessage, 2000),
+            gem: gem?.noGem ? undefined : this.compactObject({ id: gem?.id, name: gem?.name, builtin: Boolean(gem?.builtin) })
+        };
         if (this.aiState.webAccess.enabled) {
             context.webAccess = this.compactObject({
                 enabled: true,
@@ -1577,6 +1930,7 @@ const app = {
     },
 
     getAITaskPrompt(task, message) {
+        if (task === 'free_chat' || !task) return String(message || '').trim();
         const prompts = {
             prepare_package: '请根据上下文生成面试准备包，包含岗位核心要求、可能问题、项目经历准备建议、自我介绍方向和反问问题。',
             summarize_jd: '请总结岗位 JD，提炼职责、硬性要求、隐含考点、准备优先级和风险点。',
@@ -1594,12 +1948,20 @@ const app = {
     async runAIFromInput() {
         const input = document.getElementById('ai-user-message');
         const message = input?.value.trim() || '';
-        await this.callAI(this.aiState.selectedTask, message);
+        await this.callAI(this.aiState.selectedTask || 'free_chat', message);
     },
 
     async callAI(task, message) {
-        const userPrompt = this.getAITaskPrompt(task, message);
-        const context = this.buildAIContext(task, message);
+        const effectiveTask = task || 'free_chat';
+        const userPrompt = this.getAITaskPrompt(effectiveTask, message);
+        if (effectiveTask === 'free_chat' && !userPrompt) {
+            this.showToast('请输入你想问 AI 的问题', 'warn');
+            return;
+        }
+        const context = this.buildAIContext(effectiveTask, message);
+        const gem = this.getSelectedAIGem();
+        const modelSettings = this.aiState.modelSettings;
+        const shouldSendTemperature = !(modelSettings.provider === 'deepseek' && Boolean(modelSettings.thinking));
         this.aiState.messages.push({ role: 'user', content: message || userPrompt, createdAt: new Date().toISOString() });
         this.aiState.loading = true;
         this.renderAI(true);
@@ -1612,10 +1974,24 @@ const app = {
             const webAccess = this.aiState.webAccess.enabled
                 ? { enabled: true, mode: 'url', url: webURL }
                 : { enabled: false };
+            const requestBody = {
+                provider: modelSettings.provider,
+                model: modelSettings.model,
+                thinking: Boolean(modelSettings.thinking),
+                task: effectiveTask,
+                context,
+                message: userPrompt,
+                gemId: gem?.id || '',
+                customSystemPrompt: gem?.systemPrompt || '',
+                webAccess
+            };
+            if (shouldSendTemperature) {
+                requestBody.temperature = modelSettings.temperature;
+            }
             const res = await fetch(endpoint, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ task, context, message: userPrompt, webAccess })
+                body: JSON.stringify(requestBody)
             });
             const data = await res.json();
             if (!res.ok || !data.ok) throw new Error(data.error || 'AI 调用失败');
@@ -1658,7 +2034,7 @@ const app = {
     },
 
     copyAIContextPreview() {
-        this.copyText(JSON.stringify(this.buildAIContext(this.aiState.selectedTask), null, 2), '上下文预览已复制');
+        this.copyText(JSON.stringify(this.buildAIContext(this.aiState.selectedTask || 'free_chat'), null, 2), '上下文预览已复制');
     },
 
     clearAIChat() {

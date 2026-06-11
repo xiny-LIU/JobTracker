@@ -1,7 +1,23 @@
-const DEEPSEEK_BASE_URL = 'https://api.deepseek.com';
-const DEFAULT_MODEL = 'deepseek-v4-flash';
+const PROVIDERS = {
+  deepseek: {
+    label: 'DeepSeek',
+    endpoint: 'https://api.deepseek.com/chat/completions',
+    keyName: 'DEEPSEEK_API_KEY',
+    defaultModel: 'deepseek-v4-flash',
+    models: ['deepseek-v4-flash', 'deepseek-v4-pro']
+  },
+  qwen: {
+    label: 'Qwen',
+    endpoint: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
+    keyName: 'QWEN_API_KEY',
+    defaultModel: 'qwen-plus',
+    models: ['qwen-plus', 'qwen-max', 'qwen-turbo']
+  }
+};
 
 const systemPrompt = `你是一个求职辅导 AI。你需要根据用户提供的岗位、公司、简历、面试记录等上下文，给出具体、可执行、适合应届生求职场景的建议。输出使用中文 Markdown。不要编造用户没有提供的事实。若上下文不足，请明确说明需要补充的信息。`;
+
+const freeChatSystemPrompt = `你是 JobTracker 的求职辅助 AI。用户可能会自由提问，也可能提供公司、岗位、资料、面试记录等上下文。请基于用户当前选择的上下文回答。不要编造未提供的信息。输出中文 Markdown。如果上下文不足，请说明需要补充哪些信息。`;
 
 function truncateText(value, max = 8000) {
   const text = String(value || '').replace(/\s+/g, ' ').trim();
@@ -85,6 +101,34 @@ function jsonResponse(body, status = 200, origin = '*') {
   });
 }
 
+function resolveProvider(providerName = 'deepseek', modelName = '') {
+  const providerKey = PROVIDERS[providerName] ? providerName : 'deepseek';
+  const provider = PROVIDERS[providerKey];
+  const model = modelName || provider.defaultModel;
+  if (!provider.models.includes(model)) {
+    throw new Error(`不支持的模型：${model}`);
+  }
+  return { key: providerKey, ...provider, model };
+}
+
+function getProviderApiKey(env, provider) {
+  const key = env[provider.keyName];
+  if (key) return key;
+  if (provider.key === 'qwen') throw new Error('Qwen API Key 未配置');
+  throw new Error('DeepSeek API Key 未配置');
+}
+
+function normalizeTemperature(value) {
+  const number = Number(value);
+  return [0.2, 0.4, 0.7].includes(number) ? number : 0.4;
+}
+
+function buildSystemPrompt(task, customSystemPrompt) {
+  const basePrompt = task === 'free_chat' ? freeChatSystemPrompt : systemPrompt;
+  const custom = String(customSystemPrompt || '').trim();
+  return [basePrompt, custom ? `自定义 Gem 指令：\n${custom}` : ''].filter(Boolean).join('\n\n');
+}
+
 export default {
   async fetch(request, env) {
     const origin = request.headers.get('Origin') || '*';
@@ -97,12 +141,22 @@ export default {
       return jsonResponse({ ok: false, error: 'Method not allowed' }, 405, origin);
     }
 
-    if (!env.DEEPSEEK_API_KEY) {
-      return jsonResponse({ ok: false, error: '服务端未配置 DEEPSEEK_API_KEY' }, 500, origin);
-    }
-
     try {
-      const { task = '', context = {}, message = '', webAccess = {} } = await request.json();
+      const {
+        provider = 'deepseek',
+        model = '',
+        thinking = false,
+        temperature = 0.4,
+        task = '',
+        context = {},
+        message = '',
+        gemId = '',
+        customSystemPrompt = '',
+        webAccess = {}
+      } = await request.json();
+
+      const providerConfig = resolveProvider(provider, model);
+      const apiKey = getProviderApiKey(env, providerConfig);
       const webContext = await fetchWebContext(webAccess);
       const mergedContext = webContext
         ? {
@@ -117,35 +171,44 @@ export default {
         : context;
       const userPrompt = [
         `任务：${task || 'general'}`,
+        gemId ? `Gem：${gemId}` : '',
         `用户要求：${String(message || '').trim() || '请根据上下文生成建议。'}`,
         '上下文 JSON：',
         JSON.stringify(mergedContext || {}, null, 2),
         webContext ? `请在回答末尾用“来源”列出：${webContext.url}` : ''
-      ].join('\n\n');
+      ].filter(Boolean).join('\n\n');
 
-      const response = await fetch(`${DEEPSEEK_BASE_URL}/chat/completions`, {
+      const payload = {
+        model: providerConfig.model,
+        messages: [
+          { role: 'system', content: buildSystemPrompt(task, customSystemPrompt) },
+          { role: 'user', content: userPrompt }
+        ],
+        stream: false
+      };
+
+      if (providerConfig.key === 'deepseek') {
+        payload.thinking = { type: thinking ? 'enabled' : 'disabled' };
+      }
+
+      if (providerConfig.key !== 'deepseek' || !thinking) {
+        payload.temperature = normalizeTemperature(temperature);
+      }
+
+      const response = await fetch(providerConfig.endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${env.DEEPSEEK_API_KEY}`
+          Authorization: `Bearer ${apiKey}`
         },
-        body: JSON.stringify({
-          model: env.DEEPSEEK_MODEL || DEFAULT_MODEL,
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userPrompt }
-          ],
-          thinking: { type: 'disabled' },
-          stream: false,
-          temperature: 0.4
-        })
+        body: JSON.stringify(payload)
       });
 
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
         return jsonResponse({
           ok: false,
-          error: data?.error?.message || `DeepSeek API 请求失败：${response.status}`
+          error: data?.error?.message || `${providerConfig.label} API 请求失败：${response.status}`
         }, response.status, origin);
       }
 
