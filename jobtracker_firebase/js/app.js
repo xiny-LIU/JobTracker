@@ -112,8 +112,54 @@ const app = {
             position?.salary,
             position?.jd,
             position?.status,
+            position?.interviewDdl,
+            position?.interviewDdlNote,
+            position?.interviewDdl ? '预约 DDL 面试预约 面试预约DDL' : '',
             resume?.name
         ].join(' '));
+    },
+
+    formatDateTime(value) {
+        if (!value) return '';
+        const date = new Date(value);
+        if (!Number.isFinite(date.getTime())) return '';
+        return date.toLocaleString('zh-CN', {
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    },
+
+    formatFullDateTime(value) {
+        if (!value) return '';
+        const date = new Date(value);
+        if (!Number.isFinite(date.getTime())) return '';
+        return date.toLocaleString('zh-CN', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    },
+
+    getDdlTimeText(value) {
+        const target = new Date(value).getTime();
+        if (!Number.isFinite(target)) return '';
+
+        const diffMs = target - Date.now();
+        const diffDays = Math.ceil(diffMs / 86400000);
+
+        if (diffMs < 0) return '已逾期';
+        if (diffDays === 0) return '今天截止';
+        if (diffDays === 1) return '明天截止';
+        return `还有 ${diffDays} 天`;
+    },
+
+    isInterviewDdlOverdue(value) {
+        const target = new Date(value).getTime();
+        return Number.isFinite(target) && target < Date.now();
     },
 
     renderMarkdown(text) {
@@ -354,11 +400,32 @@ const app = {
         // Reminders
         const reminders = [];
         this.data.positions.forEach(p => {
+            const c = this.getCompany(p.companyId);
+            const isClosed = ['Offer','接受','拒绝'].includes(p.status);
             if (p.deadline) {
                 const days = Math.ceil((new Date(p.deadline) - now) / 86400000);
-                if (days <= 3 && days >= -1 && !['Offer','接受','拒绝'].includes(p.status)) {
-                    const c = this.getCompany(p.companyId);
-                    reminders.push({ text: `${c?.name} ${p.title} ${days < 0 ? '已逾期' : days + '天后截止'}`, date: p.deadline, urgent: days < 0 });
+                if (days <= 3 && days >= -1 && !isClosed) {
+                    reminders.push({ type: 'deadline', text: `${c?.name} ${p.title} ${days < 0 ? '已逾期' : days + '天后截止'}`, date: p.deadline, urgent: days < 0 });
+                }
+            }
+            if (p.interviewDdl && !isClosed) {
+                const target = new Date(p.interviewDdl).getTime();
+                if (Number.isFinite(target)) {
+                    const diffMs = target - now.getTime();
+                    const diffDays = Math.ceil(diffMs / 86400000);
+                    const isOverdue = diffMs < 0;
+                    if (isOverdue || diffDays <= 7) {
+                        const timeText = this.getDdlTimeText(p.interviewDdl);
+                        reminders.push({
+                            type: 'interviewDdl',
+                            tag: '面试预约',
+                            text: `${c?.name || ''} ${p.title} 面试预约 DDL ${timeText}`,
+                            detail: p.interviewDdlNote || '',
+                            date: p.interviewDdl,
+                            urgent: isOverdue,
+                            warn: !isOverdue
+                        });
+                    }
                 }
             }
         });
@@ -368,17 +435,26 @@ const app = {
                 if (days >= 3) {
                     const p = this.data.positions.find(x => x.id === i.positionId);
                     const c = p ? this.getCompany(p.companyId) : null;
-                    reminders.push({ text: `${c?.name || ''} ${i.round} 已${days}天未反馈`, date: i.date, urgent: days > 7 });
+                    reminders.push({ type: 'feedback', text: `${c?.name || ''} ${i.round} 已${days}天未反馈`, date: i.date, urgent: days > 7 });
                 }
             }
         });
 
         document.getElementById('reminder-list').innerHTML = reminders.length === 0
             ? '<div style="text-align:center;color:#94a3b8;padding:20px;">暂无待办 🎉</div>'
-            : reminders.sort((a,b) => new Date(a.date) - new Date(b.date)).map(r => `
+            : reminders.sort((a,b) => {
+                const overdueA = a.urgent && new Date(a.date).getTime() < now.getTime();
+                const overdueB = b.urgent && new Date(b.date).getTime() < now.getTime();
+                if (overdueA !== overdueB) return overdueA ? -1 : 1;
+                return new Date(a.date) - new Date(b.date);
+            }).map(r => `
                 <div class="reminder-item ${r.urgent ? 'urgent' : 'warn'}">
                     <div class="dot"></div>
-                    <div class="reminder-text"><div>${this.escapeHTML(r.text)}</div><div class="reminder-date">${this.escapeHTML(r.date)}</div></div>
+                    <div class="reminder-text">
+                        <div>${r.tag ? `<span class="reminder-tag">${this.escapeHTML(r.tag)}</span>` : ''}${this.escapeHTML(r.text)}</div>
+                        ${r.detail ? `<div class="reminder-detail">${this.escapeHTML(r.detail)}</div>` : ''}
+                        <div class="reminder-date">${this.escapeHTML(r.type === 'interviewDdl' ? this.formatFullDateTime(r.date) : r.date)}</div>
+                    </div>
                 </div>`).join('');
 
         // Activities
@@ -511,6 +587,10 @@ const app = {
                     const stars = Array(5).fill(0).map((_,i) => `<span class="card-star ${i < p.priority ? 'active' : ''}">★</span>`).join('');
                     const positionId = this.inlineArg(p.id);
                     const positionBadgeClass = this.safeBadgeClass(p.status);
+                    const ddlText = p.interviewDdl ? this.getDdlTimeText(p.interviewDdl) : '';
+                    const ddlChipHtml = ddlText
+                        ? `<span class="card-meta-chip ddl-chip ${this.isInterviewDdlOverdue(p.interviewDdl) ? 'is-overdue' : ''}">预约DDL：${this.escapeHTML(ddlText === '已逾期' ? '已逾期' : this.formatDateTime(p.interviewDdl))}</span>`
+                        : '';
                     return `<div class="card position-card" onclick="event.stopPropagation();app.openDetail('${positionId}')">
                         <div class="card-header position-card-header">
                             <div class="position-title-wrap">
@@ -519,7 +599,7 @@ const app = {
                             <span class="activity-badge badge-${positionBadgeClass}">${this.escapeHTML(p.status)}</span>
                         </div>
                         <div class="card-stars">${stars}</div>
-                        <div class="card-meta"><span>📍 ${this.escapeHTML(p.location || '未知')}</span><span>💰 ${this.escapeHTML(p.salary || '面议')}</span></div>
+                        <div class="card-meta"><span>📍 ${this.escapeHTML(p.location || '未知')}</span><span>💰 ${this.escapeHTML(p.salary || '面议')}</span>${ddlChipHtml}</div>
                         ${r ? `<div class="card-resume">📄 ${this.escapeHTML(r.name)}</div>` : ''}
                         <div class="card-footer">
                             <span class="card-footer-text">${last ? `最近: ${this.escapeHTML(last.round)}${last.formatNote || last.interviewFormatNote ? ` · ${this.escapeHTML(last.formatNote || last.interviewFormatNote)}` : ''} ${this.escapeHTML(last.date)}` : '暂无面试'}</span>
@@ -1476,8 +1556,15 @@ const app = {
                     <div class="form-group"><label>薪资</label><input id="m-pos-salary" value="${this.escapeHTML(p.salary || '')}"></div>
                 </div>
                 <div class="form-group"><label>关联简历</label><select id="m-pos-resume"><option value="">不关联</option>${this.data.resumes.map(r => `<option value="${this.escapeHTML(r.id)}" ${p.resumeId===r.id?'selected':''}>${this.escapeHTML(r.name)}</option>`).join('')}</select></div>
-                <div class="form-group"><label>岗位JD</label><textarea id="m-pos-jd" rows="4">${this.escapeHTML(p.jd || '')}</textarea></div>
-                <div class="form-group"><label>Deadline</label><input type="date" id="m-pos-deadline" value="${this.escapeHTML(p.deadline || '')}"></div>`;
+                <div class="form-section">
+                    <h4>关键时间</h4>
+                    <div class="form-grid-2">
+                        <div class="form-group"><label>投递截止日期</label><input type="date" id="m-pos-deadline" value="${this.escapeHTML(p.deadline || '')}"></div>
+                        <div class="form-group"><label>面试预约 DDL</label><input type="datetime-local" id="m-pos-interview-ddl" value="${this.escapeHTML(p.interviewDdl || '')}"></div>
+                    </div>
+                    <div class="form-group"><label>预约说明</label><input id="m-pos-interview-ddl-note" placeholder="例如：牛客系统内预约一面时间" value="${this.escapeHTML(p.interviewDdlNote || '')}"></div>
+                </div>
+                <div class="form-group"><label>岗位JD</label><textarea id="m-pos-jd" rows="4">${this.escapeHTML(p.jd || '')}</textarea></div>`;
             setTimeout(() => this.renderStarInput('m-pos-stars', 'm-pos-priority', p.priority || 3), 0);
             footer.innerHTML = `${isEdit?'<button class="btn-danger" data-action="deletePosition">删除</button>':''}<div style="margin-left:auto;display:flex;gap:8px;"><button class="btn-secondary" data-action="closeModal">取消</button><button class="btn-primary" data-action="savePosition">保存</button></div>`;
         } else if (type === 'resume') {
@@ -1616,7 +1703,7 @@ const app = {
         if (!title || !companyId) return alert('请填写岗位名称并选择公司');
         // 新增岗位时，默认状态为"未投递"；编辑时保持当前状态
         const status = id ? document.getElementById('m-pos-status').value : (document.getElementById('m-pos-status').value || '未投递');
-        const data = { title, companyId, status, priority: parseInt(document.getElementById('m-pos-priority').value) || 3, location: document.getElementById('m-pos-location').value.trim(), salary: document.getElementById('m-pos-salary').value.trim(), resumeId: document.getElementById('m-pos-resume').value, jd: document.getElementById('m-pos-jd').value.trim(), deadline: document.getElementById('m-pos-deadline').value };
+        const data = { title, companyId, status, priority: parseInt(document.getElementById('m-pos-priority').value) || 3, location: document.getElementById('m-pos-location').value.trim(), salary: document.getElementById('m-pos-salary').value.trim(), resumeId: document.getElementById('m-pos-resume').value, jd: document.getElementById('m-pos-jd').value.trim(), deadline: document.getElementById('m-pos-deadline').value, interviewDdl: document.getElementById('m-pos-interview-ddl')?.value || '', interviewDdlNote: document.getElementById('m-pos-interview-ddl-note')?.value.trim() || '' };
         if (id) DataStore.updatePosition(id, data);
         else DataStore.addPosition(data);
         this.data = DataStore.get();
@@ -1879,6 +1966,16 @@ const app = {
         const safePositionId = this.inlineArg(p.id);
         const website = this.safeURL(c?.website);
         const badgeClass = this.safeBadgeClass(p.status);
+        const interviewDdlText = p.interviewDdl ? this.formatFullDateTime(p.interviewDdl) : '';
+        const interviewDdlOverdue = this.isInterviewDdlOverdue(p.interviewDdl);
+        const positionTimingHtml = (p.deadline || interviewDdlText || p.interviewDdlNote) ? `<div class="panel detail-panel position-timing-panel">
+                        <h4 class="detail-panel-title">岗位概览</h4>
+                        <div class="detail-meta-list">
+                            ${p.deadline ? `<div class="detail-meta-row"><span>投递截止日期</span><strong>${this.escapeHTML(p.deadline)}</strong></div>` : ''}
+                            ${interviewDdlText ? `<div class="detail-meta-row detail-ddl-row"><span>面试预约 DDL</span><strong class="detail-ddl-chip ${interviewDdlOverdue ? 'is-overdue' : ''}">${this.escapeHTML(interviewDdlText)} · ${this.escapeHTML(this.getDdlTimeText(p.interviewDdl))}</strong></div>` : ''}
+                            ${p.interviewDdlNote ? `<div class="detail-ddl-note">${this.escapeHTML(p.interviewDdlNote)}</div>` : ''}
+                        </div>
+                    </div>` : '';
         const interviewDetailHtml = ivs.map(i => {
             const formatNote = i.formatNote || i.interviewFormatNote || '';
             return `<div class="interview-record-card" onclick="event.stopPropagation();app.openInterviewModal('${safePositionId}', '${this.inlineArg(i.id)}')">
@@ -1910,6 +2007,7 @@ const app = {
                         <span class="activity-badge badge-投递">${this.escapeHTML(p.salary || '薪资面议')}</span>
                         <span class="detail-stars">${stars}</span>
                     </div>
+                    ${positionTimingHtml}
                     <div class="panel detail-panel">
                         <div class="detail-panel-head">
                             <h4 class="detail-panel-title">进度时间线</h4>
