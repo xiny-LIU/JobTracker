@@ -2410,6 +2410,14 @@ body {
     padding-top: 14px;
 }
 
+.ai-web-box {
+    background: #f8fafc;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    margin-top: 14px;
+    padding: 12px;
+}
+
 .ai-context-subtitle,
 .ai-context-preview-head {
     color: var(--text-secondary);
@@ -2425,6 +2433,31 @@ body {
     font-size: 12px;
     gap: 8px;
     margin-bottom: 8px;
+}
+
+.ai-web-url-label {
+    color: var(--text);
+    display: grid;
+    font-size: 12px;
+    font-weight: 700;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.ai-web-url-label input {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font: inherit;
+    padding: 9px 10px;
+    width: 100%;
+}
+
+.ai-web-hint {
+    color: var(--text-secondary);
+    font-size: 11px;
+    line-height: 1.5;
+    margin-top: 8px;
+    overflow-wrap: anywhere;
 }
 
 .ai-context-preview-head {

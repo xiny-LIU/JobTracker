@@ -27,7 +27,12 @@ const app = {
             analyticsSummary: false
         },
         messages: [],
-        loading: false
+        loading: false,
+        webAccess: {
+            enabled: false,
+            useCompanyWebsite: true,
+            url: ''
+        }
     },
 
     init() {
@@ -1330,7 +1335,7 @@ const app = {
         }
     },
 
-    renderAI() {
+    renderAI(scrollToBottom = false) {
         this.ensureAIStateDefaults();
         const taskPanel = document.getElementById('ai-task-panel');
         const chatPanel = document.getElementById('ai-chat-panel');
@@ -1342,6 +1347,8 @@ const app = {
         const latest = this.getLatestAIContent();
         const positions = this.data.positions;
         const interviews = this.getAISelectableInterviews();
+        const selectedCompany = this.data.companies.find(c => c.id === this.aiState.selectedCompanyId);
+        const webURL = this.getAIWebURL();
         const preview = this.buildAIContext(this.aiState.selectedTask);
         const previewText = JSON.stringify(preview, null, 2);
 
@@ -1398,11 +1405,29 @@ const app = {
                 ${this.renderAIContextScopeToggle('recentActivities', '最近活动')}
                 ${this.renderAIContextScopeToggle('analyticsSummary', '数据洞察摘要')}
             </div>
+            <div class="ai-web-box">
+                <div class="ai-context-subtitle">联网读取（用户可选）</div>
+                <label class="ai-scope-row"><input type="checkbox" ${this.aiState.webAccess.enabled ? 'checked' : ''} onchange="app.updateAIWebAccess('enabled', this.checked)"> <span>启用联网读取 URL</span></label>
+                <label class="ai-scope-row"><input type="checkbox" ${this.aiState.webAccess.useCompanyWebsite ? 'checked' : ''} onchange="app.updateAIWebAccess('useCompanyWebsite', this.checked)" ${selectedCompany?.website ? '' : 'disabled'}> <span>优先读取当前公司官网${selectedCompany?.website ? `：${this.escapeHTML(selectedCompany.website)}` : '（当前公司未填写官网）'}</span></label>
+                <label class="ai-web-url-label">手动 URL
+                    <input id="ai-web-url" value="${this.escapeHTML(this.aiState.webAccess.url || '')}" placeholder="https://公司官网或招聘页面" oninput="app.updateAIWebAccess('url', this.value, false)">
+                </label>
+                <div class="ai-web-hint">${this.aiState.webAccess.enabled && webURL ? `本次将请求：${this.escapeHTML(webURL)}` : '默认不联网；开启后才会读取 URL，网页正文只临时发给 AI。'}</div>
+            </div>
             <div class="ai-context-preview-head">
                 <span>将发送内容预览</span>
                 <button class="card-btn" onclick="app.copyAIContextPreview()">复制上下文</button>
             </div>
             <pre class="ai-context-preview">${this.escapeHTML(previewText)}</pre>`;
+
+        if (scrollToBottom) this.scrollAIOutputToBottom();
+    },
+
+    scrollAIOutputToBottom() {
+        setTimeout(() => {
+            const output = document.querySelector('#ai-chat-panel .ai-output');
+            if (output) output.scrollTop = output.scrollHeight;
+        }, 0);
     },
 
     renderAIContextScopeToggle(key, label) {
@@ -1439,6 +1464,27 @@ const app = {
         this.renderAI();
     },
 
+    updateAIWebAccess(key, value, shouldRender = true) {
+        this.aiState.webAccess[key] = value;
+        if (shouldRender) this.renderAI();
+    },
+
+    getAIWebURL() {
+        if (!this.aiState.webAccess.enabled) return '';
+        const company = this.data.companies.find(c => c.id === this.aiState.selectedCompanyId);
+        const candidate = this.aiState.webAccess.useCompanyWebsite && company?.website
+            ? company.website
+            : this.aiState.webAccess.url;
+        const raw = String(candidate || '').trim();
+        if (!raw) return '';
+        try {
+            const url = new URL(raw, window.location.href);
+            return ['http:', 'https:'].includes(url.protocol) ? url.href : '';
+        } catch (e) {
+            return '';
+        }
+    },
+
     truncateAIText(value, max = 6000) {
         const text = String(value || '').trim();
         if (!text) return '';
@@ -1460,7 +1506,15 @@ const app = {
         const position = this.data.positions.find(p => p.id === this.aiState.selectedPositionId);
         const resume = this.data.resumes.find(r => r.id === this.aiState.selectedResumeId);
         const interview = this.data.interviews.find(i => i.id === this.aiState.selectedInterviewId);
+        const webURL = this.getAIWebURL();
         const context = { task, userMessage: this.truncateAIText(userMessage, 2000) };
+        if (this.aiState.webAccess.enabled) {
+            context.webAccess = this.compactObject({
+                enabled: true,
+                source: this.aiState.webAccess.useCompanyWebsite ? 'companyWebsite' : 'manualUrl',
+                url: webURL
+            });
+        }
 
         if (company) {
             context.company = this.compactObject({
@@ -1548,25 +1602,34 @@ const app = {
         const context = this.buildAIContext(task, message);
         this.aiState.messages.push({ role: 'user', content: message || userPrompt, createdAt: new Date().toISOString() });
         this.aiState.loading = true;
-        this.renderAI();
+        this.renderAI(true);
 
         try {
             const endpoint = this.getAIEndpoint();
             if (!endpoint) throw new Error('请先在设置系统中填写 AI 代理地址');
+            const webURL = this.getAIWebURL();
+            if (this.aiState.webAccess.enabled && !webURL) throw new Error('已启用联网读取，但没有可用 URL');
+            const webAccess = this.aiState.webAccess.enabled
+                ? { enabled: true, mode: 'url', url: webURL }
+                : { enabled: false };
             const res = await fetch(endpoint, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ task, context, message: userPrompt })
+                body: JSON.stringify({ task, context, message: userPrompt, webAccess })
             });
             const data = await res.json();
             if (!res.ok || !data.ok) throw new Error(data.error || 'AI 调用失败');
-            this.aiState.messages.push({ role: 'assistant', content: data.content || '', createdAt: new Date().toISOString() });
+            const sources = Array.isArray(data.sources) ? data.sources : [];
+            const sourceText = sources.length && !sources.some(source => String(data.content || '').includes(source.url))
+                ? `\n\n## 来源\n${sources.map(source => `- ${source.title ? `${source.title}：` : ''}${source.url}`).join('\n')}`
+                : '';
+            this.aiState.messages.push({ role: 'assistant', content: `${data.content || ''}${sourceText}`, createdAt: new Date().toISOString() });
             this.showToast('AI 已生成结果', 'success');
         } catch (err) {
             this.showToast(err.message || 'AI 调用失败', 'error');
         } finally {
             this.aiState.loading = false;
-            this.renderAI();
+            this.renderAI(true);
         }
     },
 
