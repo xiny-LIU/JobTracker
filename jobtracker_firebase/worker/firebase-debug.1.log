@@ -1,0 +1,25 @@
+[debug] [2026-06-11T13:45:52.583Z] ----------------------------------------------------------------------
+[debug] [2026-06-11T13:45:52.585Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\Admin\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js login --reauth
+[debug] [2026-06-11T13:45:52.586Z] CLI Version:   15.18.0
+[debug] [2026-06-11T13:45:52.586Z] Platform:      win32
+[debug] [2026-06-11T13:45:52.586Z] Node Version:  v24.16.0
+[debug] [2026-06-11T13:45:52.586Z] Time:          Thu Jun 11 2026 21:45:52 GMT+0800 (中国标准时间)
+[debug] [2026-06-11T13:45:52.586Z] ----------------------------------------------------------------------
+[debug] 
+[info] 
+[info] Visit this URL on this device to log in:
+[info] https://accounts.google.com/o/oauth2/auth?client_id=563584335869-fgrhgmd47bqnekij5i8b5pr03ho849e6.apps.googleusercontent.com&scope=email%20openid%20https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcloudplatformprojects.readonly%20https%3A%2F%2Fwww.googleapis.com%2Fauth%2Ffirebase%20https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcloud-platform&response_type=code&state=269099756&redirect_uri=http%3A%2F%2Flocalhost%3A9005&login_hint=xinyliu1029%40gmail.com
+[info] 
+[info] Waiting for authentication...
+[debug] [2026-06-11T13:45:57.899Z] >>> [apiv2][query] POST https://accounts.google.com/o/oauth2/token [none]
+[debug] [2026-06-11T13:45:57.899Z] >>> [apiv2][body] POST https://accounts.google.com/o/oauth2/token [omitted]
+[debug] [2026-06-11T13:45:58.347Z] <<< [apiv2][status] POST https://accounts.google.com/o/oauth2/token 200
+[debug] [2026-06-11T13:45:58.347Z] <<< [apiv2][body] POST https://accounts.google.com/o/oauth2/token [omitted]
+[info] 
+[info] +  Success! Logged in as xinyliu1029@gmail.com 
+[debug] [2026-06-11T13:46:03.572Z] Error: Timed out.
+    at Timeout._onTimeout (C:\Users\Admin\AppData\Roaming\npm\node_modules\firebase-tools\lib\utils.js:309:49)
+    at listOnTimeout (node:internal/timers:605:17)
+    at process.processTimers (node:internal/timers:541:7)
+[error] 
+[error] Error: An unexpected error has occurred.
